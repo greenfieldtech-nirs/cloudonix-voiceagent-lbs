@@ -20,7 +20,7 @@ return new class extends Migration
             $table->boolean('enabled')->default(true);
             $table->timestamps();
 
-            $table->index(['tenant_id', 'enabled'], 'idx_tenant_enabled');
+            $table->index(['tenant_id', 'enabled'], 'idx_outbound_tenant_enabled');
             $table->index(['tenant_id', 'caller_id'], 'idx_tenant_caller_id');
         });
     }

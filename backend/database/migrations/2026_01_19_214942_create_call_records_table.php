@@ -28,7 +28,7 @@ return new class extends Migration
 
             $table->index(['tenant_id', 'session_token'], 'idx_tenant_session');
             $table->index(['tenant_id', 'direction', 'status'], 'idx_tenant_direction_status');
-            $table->index(['tenant_id', 'start_time'], 'idx_tenant_start_time');
+            $table->index(['tenant_id', 'start_time'], 'idx_call_records_tenant_start_time');
             $table->index(['agent_id', 'start_time'], 'idx_agent_start_time');
         });
     }

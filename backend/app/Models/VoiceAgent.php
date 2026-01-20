@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +11,7 @@ use App\Validators\VoiceAgentProviderValidator;
 
 class VoiceAgent extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'tenant_id',
         'name',
@@ -198,31 +200,5 @@ class VoiceAgent extends Model
         }
     }
 
-    /**
-     * Get provider display name
-     */
-    public function getProviderDisplayName(): string
-    {
-        return match($this->provider) {
-            'synthflow' => 'Synthflow',
-            'dasha' => 'Dasha',
-            'superdash.ai' => 'Superdash',
-            'elevenlabs' => 'Eleven Labs',
-            'deepvox' => 'Deepvox',
-            'relayhawk' => 'Relay Hawk',
-            'voicehub' => 'Voice Hub',
-            'retell-udp' => 'Retell (UDP)',
-            'retell-tcp' => 'Retell (TCP)',
-            'retell-tls' => 'Retell (TLS)',
-            'retell' => 'Retell',
-            'vapi' => 'VAPI',
-            'fonio' => 'Fonio',
-            'sigmamind' => 'Sigma Mind',
-            'modon' => 'Modon',
-            'puretalk' => 'PureTalk',
-            'millis-us' => 'Millis (US)',
-            'millis-eu' => 'Millis (EU)',
-            default => ucfirst($this->provider),
-        };
-    }
+
 }

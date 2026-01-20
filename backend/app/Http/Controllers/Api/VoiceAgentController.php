@@ -10,6 +10,7 @@ use App\Http\Requests\StoreVoiceAgentRequest;
 use App\Http\Requests\UpdateVoiceAgentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 class VoiceAgentController extends Controller
@@ -19,9 +20,9 @@ class VoiceAgentController extends Controller
      */
     public function index(Request $request): VoiceAgentCollection
     {
-        $this->authorize('viewAny', VoiceAgent::class);
+        Gate::authorize('viewAny', VoiceAgent::class);
 
-        $query = VoiceAgent::query()->with('groups');
+        $query = VoiceAgent::where('tenant_id', auth()->user()->tenant_id);
 
         // Apply filters
         if ($request->has('search') && !empty($request->search)) {
@@ -54,7 +55,7 @@ class VoiceAgentController extends Controller
      */
     public function store(StoreVoiceAgentRequest $request): JsonResponse
     {
-        $this->authorize('create', VoiceAgent::class);
+        Gate::authorize('create', VoiceAgent::class);
 
         try {
             $validated = $request->validated();
@@ -77,7 +78,7 @@ class VoiceAgentController extends Controller
 
             return response()->json([
                 'message' => 'Voice agent created successfully',
-                'data' => new VoiceAgentResource($agent->load('groups'))
+                'data' => new VoiceAgentResource($agent)
             ], 201);
 
         } catch (\Exception $e) {
@@ -98,9 +99,9 @@ class VoiceAgentController extends Controller
      */
     public function show(VoiceAgent $voiceAgent): VoiceAgentResource
     {
-        $this->authorize('view', $voiceAgent);
+        Gate::authorize('view', $voiceAgent);
 
-        return new VoiceAgentResource($voiceAgent->load('groups'));
+        return new VoiceAgentResource($voiceAgent);
     }
 
     /**
@@ -108,7 +109,7 @@ class VoiceAgentController extends Controller
      */
     public function update(UpdateVoiceAgentRequest $request, VoiceAgent $voiceAgent): JsonResponse
     {
-        $this->authorize('update', $voiceAgent);
+        Gate::authorize('update', $voiceAgent);
 
         try {
             $validated = $request->validated();
@@ -123,7 +124,7 @@ class VoiceAgentController extends Controller
 
             return response()->json([
                 'message' => 'Voice agent updated successfully',
-                'data' => new VoiceAgentResource($voiceAgent->load('groups'))
+                'data' => new VoiceAgentResource($voiceAgent)
             ]);
 
         } catch (\Exception $e) {
@@ -145,7 +146,7 @@ class VoiceAgentController extends Controller
      */
     public function toggleStatus(VoiceAgent $voiceAgent): JsonResponse
     {
-        $this->authorize('toggle', $voiceAgent);
+        Gate::authorize('toggle', $voiceAgent);
 
         try {
             $voiceAgent->update([
@@ -162,7 +163,7 @@ class VoiceAgentController extends Controller
 
             return response()->json([
                 'message' => "Voice agent {$status} successfully",
-                'data' => new VoiceAgentResource($voiceAgent->load('groups'))
+                'data' => new VoiceAgentResource($voiceAgent)
             ]);
 
         } catch (\Exception $e) {
@@ -184,19 +185,20 @@ class VoiceAgentController extends Controller
      */
     public function destroy(VoiceAgent $voiceAgent): JsonResponse
     {
-        $this->authorize('delete', $voiceAgent);
+        Gate::authorize('delete', $voiceAgent);
 
         try {
             $agentName = $voiceAgent->name;
             $agentId = $voiceAgent->id;
 
             // Check if agent is used in any groups
-            if ($voiceAgent->groups()->count() > 0) {
-                return response()->json([
-                    'message' => 'Cannot delete voice agent that is assigned to agent groups',
-                    'groups_count' => $voiceAgent->groups()->count()
-                ], 422);
-            }
+            // TODO: Re-enable when agent groups are implemented in WP3
+            // if ($voiceAgent->groups()->count() > 0) {
+            //     return response()->json([
+            //         'message' => 'Cannot delete voice agent that is assigned to agent groups',
+            //         'groups_count' => $voiceAgent->groups()->count()
+            //     ], 422);
+            // }
 
             $voiceAgent->delete();
 
@@ -229,7 +231,7 @@ class VoiceAgentController extends Controller
      */
     public function validateConfig(VoiceAgent $voiceAgent): JsonResponse
     {
-        $this->authorize('validateConfig', $voiceAgent);
+        Gate::authorize('validateConfig', $voiceAgent);
 
         $errors = $voiceAgent->getValidationErrors();
 
@@ -251,7 +253,7 @@ class VoiceAgentController extends Controller
      */
     public function providers(): JsonResponse
     {
-        $this->authorize('viewProviders', VoiceAgent::class);
+        Gate::authorize('viewProviders', VoiceAgent::class);
 
         $providers = [];
 
