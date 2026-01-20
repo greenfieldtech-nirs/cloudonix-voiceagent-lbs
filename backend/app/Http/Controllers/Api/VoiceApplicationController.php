@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Services\CloudonixWebhookValidator;
 
 /**
  * VoiceApplicationController handles webhook endpoints for Cloudonix Voice Applications
@@ -31,19 +32,72 @@ class VoiceApplicationController extends Controller
     public function handleApplication(Request $request, $applicationId)
     {
         try {
-            // Basic webhook validation - check for Cloudonix headers
-            $this->validateWebhookRequest($request);
+            // Comprehensive webhook validation using service
+            $validator = app(CloudonixWebhookValidator::class);
+            $validationReport = $validator->generateValidationReport($request);
+
+            if (!$validationReport['overall_valid']) {
+                Log::warning('Invalid Cloudonix webhook request', [
+                    'application_id' => $applicationId,
+                    'validation_report' => $validationReport,
+                    'request_data' => $request->all(),
+                    'headers' => $request->headers->all(),
+                ]);
+
+                return response('Invalid webhook request', 400);
+            }
+
+            // Extract and validate tenant
+            $tenantDomain = $validationReport['tenant_domain'];
+            if (!$tenantDomain) {
+                Log::warning('No tenant domain found in webhook', [
+                    'application_id' => $applicationId,
+                    'validation_report' => $validationReport,
+                ]);
+
+                return response('Tenant domain required', 400);
+            }
+
+            $tenantValidation = $validator->validateTenantDomain($tenantDomain);
+            if (!$tenantValidation['valid']) {
+                Log::warning('Invalid tenant domain in webhook', [
+                    'application_id' => $applicationId,
+                    'domain' => $tenantDomain,
+                    'error' => $tenantValidation['error'],
+                ]);
+
+                return response('Invalid tenant domain', 400);
+            }
+
+            $tenant = $tenantValidation['tenant'];
+
+            // Validate voice application request payload
+            $payloadValidation = $validator->validateVoiceApplicationRequest($request);
+            if (!$payloadValidation['valid']) {
+                Log::warning('Invalid voice application request payload', [
+                    'application_id' => $applicationId,
+                    'tenant_id' => $tenant->id,
+                    'validation_errors' => $payloadValidation['errors'],
+                    'request_data' => $request->all(),
+                ]);
+
+                return response('Invalid request payload', 400);
+            }
+
+            $validatedData = $payloadValidation['data'];
 
             // Find the voice application by provider_app_id
             $voiceApplication = VoiceApplication::where('provider_app_id', $applicationId)
+                ->where('tenant_id', $tenant->id)
                 ->where('is_active', true)
                 ->first();
 
             if (! $voiceApplication) {
                 Log::warning('Voice application not found', [
                     'application_id' => $applicationId,
-                    'request_data' => $request->all(),
-                    'headers' => $request->headers->all(),
+                    'tenant_id' => $tenant->id,
+                    'request_data' => $validatedData,
+                    'validation_report' => $validationReport,
                 ]);
 
                 return response('Application not found', 404);
@@ -52,8 +106,10 @@ class VoiceApplicationController extends Controller
             // Log the incoming request
             Log::info('Voice application request received', [
                 'application_id' => $applicationId,
-                'tenant_id' => $voiceApplication->tenant_id,
-                'request_data' => $request->all(),
+                'tenant_id' => $tenant->id,
+                'tenant_domain' => $tenantDomain,
+                'request_data' => $validatedData,
+                'validation_report' => $validationReport,
                 'headers' => $request->headers->all(),
             ]);
 
@@ -92,36 +148,33 @@ class VoiceApplicationController extends Controller
     public function handleSessionUpdate(Request $request)
     {
         try {
-            // Basic webhook validation
-            $this->validateWebhookRequest($request);
+            // Comprehensive webhook validation using service
+            $validator = app(CloudonixWebhookValidator::class);
+            $validationReport = $validator->generateValidationReport($request);
 
-            // Validate Cloudonix webhook payload structure
-            $validator = Validator::make($request->all(), [
-                'id' => 'required|integer', // Cloudonix session ID
-                'domain' => 'required|string', // Domain for tenant resolution
-                'token' => 'required|string', // Unique session token
-                'status' => 'required|string', // Call status
-                'callerId' => 'nullable|string',
-                'destination' => 'nullable|string',
-                'direction' => 'nullable|string',
-                'createdAt' => 'nullable|date',
-                'modifiedAt' => 'nullable|date',
-                'callStartTime' => 'nullable|integer',
-                'answerTime' => 'nullable|date',
-                'vappServer' => 'nullable|string',
-            ]);
-
-            if ($validator->fails()) {
-                Log::warning('Invalid Cloudonix session update webhook payload', [
-                    'errors' => $validator->errors(),
-                    'payload' => $request->all(),
+            if (!$validationReport['overall_valid']) {
+                Log::warning('Invalid Cloudonix session update webhook', [
+                    'validation_report' => $validationReport,
+                    'request_data' => $request->all(),
                     'headers' => $request->headers->all(),
+                ]);
+
+                return response('Invalid webhook request', 400);
+            }
+
+            // Validate session update payload
+            $payloadValidation = $validator->validateSessionUpdate($request);
+            if (!$payloadValidation['valid']) {
+                Log::warning('Invalid Cloudonix session update payload', [
+                    'validation_errors' => $payloadValidation['errors'],
+                    'request_data' => $request->all(),
+                    'validation_report' => $validationReport,
                 ]);
 
                 return response('Invalid payload', 400);
             }
 
-            $webhookData = $validator->validated();
+            $webhookData = $payloadValidation['data'];
 
             // Resolve tenant from domain
             $tenant = \App\Models\Tenant::where('domain', $webhookData['domain'])->first();
@@ -213,37 +266,33 @@ class VoiceApplicationController extends Controller
     public function handleCdrCallback(Request $request)
     {
         try {
-            // Basic webhook validation
-            $this->validateWebhookRequest($request);
+            // Comprehensive webhook validation using service
+            $validator = app(CloudonixWebhookValidator::class);
+            $validationReport = $validator->generateValidationReport($request);
 
-            // Validate Cloudonix CDR webhook payload structure
-            $validator = Validator::make($request->all(), [
-                'call_id' => 'required|string',
-                'domain' => 'required|string',
-                'from' => 'nullable|string',
-                'to' => 'nullable|string',
-                'disposition' => 'required|string',
-                'duration' => 'nullable|integer',
-                'billsec' => 'nullable|integer',
-                'timestamp' => 'nullable|integer',
-                'session' => 'nullable|array',
-                'session.token' => 'nullable|string',
-                'session.callStartTime' => 'nullable|integer',
-                'session.callAnswerTime' => 'nullable|integer',
-                'session.callEndTime' => 'nullable|integer',
-            ]);
-
-            if ($validator->fails()) {
-                Log::warning('Invalid Cloudonix CDR webhook payload', [
-                    'errors' => $validator->errors(),
-                    'payload' => $request->all(),
+            if (!$validationReport['overall_valid']) {
+                Log::warning('Invalid Cloudonix CDR webhook', [
+                    'validation_report' => $validationReport,
+                    'request_data' => $request->all(),
                     'headers' => $request->headers->all(),
+                ]);
+
+                return response('Invalid webhook request', 400);
+            }
+
+            // Validate CDR payload
+            $payloadValidation = $validator->validateCdrCallback($request);
+            if (!$payloadValidation['valid']) {
+                Log::warning('Invalid Cloudonix CDR payload', [
+                    'validation_errors' => $payloadValidation['errors'],
+                    'request_data' => $request->all(),
+                    'validation_report' => $validationReport,
                 ]);
 
                 return response('Invalid payload', 400);
             }
 
-            $cdrData = $validator->validated();
+            $cdrData = $payloadValidation['data'];
 
             // Resolve tenant from domain
             $tenant = \App\Models\Tenant::where('domain', $cdrData['domain'])->first();
@@ -476,47 +525,5 @@ class VoiceApplicationController extends Controller
         return $dispositionMap[strtoupper($cloudonixDisposition)] ?? 'FAILED'; // Default to FAILED
     }
 
-    /**
-     * Validate incoming webhook request
-     *
-     * Performs basic validation to ensure the request appears to be from Cloudonix
-     */
-    private function validateWebhookRequest(Request $request): void
-    {
-        // Check for Cloudonix-specific headers (adjust based on actual Cloudonix headers)
-        $cloudonixHeaders = [
-            'x-cloudonix-signature', // If they provide signature validation
-            'x-cloudonix-request-id',
-            'user-agent', // Should contain Cloudonix
-        ];
 
-        $hasCloudonixHeader = false;
-        foreach ($cloudonixHeaders as $header) {
-            if ($request->hasHeader($header)) {
-                $hasCloudonixHeader = true;
-                break;
-            }
-        }
-
-        // Check User-Agent for Cloudonix
-        $userAgent = $request->userAgent();
-        if ($userAgent && str_contains(strtolower($userAgent), 'cloudonix')) {
-            $hasCloudonixHeader = true;
-        }
-
-        if (! $hasCloudonixHeader) {
-            Log::warning('Webhook request missing Cloudonix headers', [
-                'headers' => $request->headers->all(),
-                'user_agent' => $userAgent,
-                'ip' => $request->ip(),
-            ]);
-
-            // For now, we'll allow requests without strict validation
-            // In production, you should implement proper signature validation
-            // throw new \Exception('Invalid webhook source');
-        }
-
-        // Rate limiting could be added here
-        // You might want to implement per-tenant rate limiting for webhooks
-    }
 }

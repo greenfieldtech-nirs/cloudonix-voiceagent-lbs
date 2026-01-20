@@ -32,7 +32,7 @@ class DistributionStrategiesTest extends TestCase
     private AgentGroup $loadBalancedGroup;
     private AgentGroup $priorityGroup;
     private AgentGroup $roundRobinGroup;
-    private array $agents;
+    private $agents;
 
     protected function setUp(): void
     {

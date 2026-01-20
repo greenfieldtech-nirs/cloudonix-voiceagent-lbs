@@ -2,6 +2,7 @@
 
 namespace App\Strategies;
 
+use App\Enums\DistributionStrategy as StrategyEnum;
 use App\Models\AgentGroup;
 use App\Models\VoiceAgent;
 use App\Services\RedisStrategyService;
@@ -19,14 +20,14 @@ use Illuminate\Support\Collection;
  */
 class LoadBalancedStrategy implements DistributionStrategy
 {
-    private AgentGroup $group;
+    private ?AgentGroup $group;
     private array $config;
     private RedisStrategyService $redisService;
 
-    public function __construct(AgentGroup $group, ?RedisStrategyService $redisService = null)
+    public function __construct(?AgentGroup $group = null, ?RedisStrategyService $redisService = null)
     {
         $this->group = $group;
-        $this->config = $group->getMergedSettings();
+        $this->config = $group ? $group->getMergedSettings() : StrategyEnum::LOAD_BALANCED->getDefaultSettings();
         $this->redisService = $redisService ?? app(RedisStrategyService::class);
     }
 

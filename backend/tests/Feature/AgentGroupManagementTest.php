@@ -27,7 +27,7 @@ class AgentGroupManagementTest extends TestCase
 
     private Tenant $tenant;
     private User $user;
-    private array $agents;
+    private $agents;
 
     protected function setUp(): void
     {

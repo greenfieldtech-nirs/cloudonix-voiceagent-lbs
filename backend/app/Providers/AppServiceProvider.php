@@ -22,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\StrategyMonitor::class, function ($app) {
             return new \App\Services\StrategyMonitor($app->make(\App\Services\RedisStrategyService::class));
         });
+
+        $this->app->singleton(\App\Services\CloudonixWebhookValidator::class, function ($app) {
+            return new \App\Services\CloudonixWebhookValidator();
+        });
     }
 
     /**

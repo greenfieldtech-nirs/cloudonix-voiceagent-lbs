@@ -2,6 +2,7 @@
 
 namespace App\Strategies;
 
+use App\Enums\DistributionStrategy as StrategyEnum;
 use App\Models\AgentGroup;
 use App\Models\VoiceAgent;
 use Illuminate\Support\Collection;
@@ -19,14 +20,14 @@ use Illuminate\Support\Facades\Redis;
  */
 class RoundRobinStrategy implements DistributionStrategy
 {
-    private AgentGroup $group;
+    private ?AgentGroup $group;
     private array $config;
     private \App\Services\RedisStrategyService $redisService;
 
-    public function __construct(AgentGroup $group, ?\App\Services\RedisStrategyService $redisService = null)
+    public function __construct(?AgentGroup $group = null, ?\App\Services\RedisStrategyService $redisService = null)
     {
         $this->group = $group;
-        $this->config = $group->getMergedSettings();
+        $this->config = $group ? $group->getMergedSettings() : StrategyEnum::ROUND_ROBIN->getDefaultSettings();
         $this->redisService = $redisService ?? app(\App\Services\RedisStrategyService::class);
     }
 

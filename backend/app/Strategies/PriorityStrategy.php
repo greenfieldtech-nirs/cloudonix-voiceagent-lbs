@@ -2,6 +2,7 @@
 
 namespace App\Strategies;
 
+use App\Enums\DistributionStrategy as StrategyEnum;
 use App\Models\AgentGroup;
 use App\Models\VoiceAgent;
 use Illuminate\Support\Collection;
@@ -18,13 +19,13 @@ use Illuminate\Support\Collection;
  */
 class PriorityStrategy implements DistributionStrategy
 {
-    private AgentGroup $group;
+    private ?AgentGroup $group;
     private array $config;
 
-    public function __construct(AgentGroup $group)
+    public function __construct(?AgentGroup $group = null)
     {
         $this->group = $group;
-        $this->config = $group->getMergedSettings();
+        $this->config = $group ? $group->getMergedSettings() : StrategyEnum::PRIORITY->getDefaultSettings();
     }
 
     /**
