@@ -26,6 +26,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\CloudonixWebhookValidator::class, function ($app) {
             return new \App\Services\CloudonixWebhookValidator();
         });
+
+        $this->app->singleton(\App\Services\PatternMatchingService::class, function ($app) {
+            return new \App\Services\PatternMatchingService();
+        });
+
+        $this->app->singleton(\App\Services\RoutingDecisionService::class, function ($app) {
+            return new \App\Services\RoutingDecisionService(
+                $app->make(\App\Strategies\DistributionStrategyFactory::class),
+                $app->make(\App\Services\CxmlService::class)
+            );
+        });
     }
 
     /**

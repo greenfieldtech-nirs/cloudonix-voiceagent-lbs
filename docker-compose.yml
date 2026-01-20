@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   nginx:
     build:
@@ -19,6 +18,8 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
     container_name: cloudonix-voiceagent-lbs-app
+    ports:
+      - "8000:9000"
     volumes:
       - ./backend:/var/www/html
     environment:
@@ -52,7 +53,7 @@ services:
       - cloudonix-network
     command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=9000"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/up"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -12,6 +12,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Services\CloudonixWebhookValidator;
+use App\Services\PatternMatchingService;
+use App\Services\RoutingDecisionService;
 
 /**
  * VoiceApplicationController handles webhook endpoints for Cloudonix Voice Applications
@@ -116,15 +118,19 @@ class VoiceApplicationController extends Controller
             // Store the call session if this is a new call
             $this->storeOrUpdateCallSession($voiceApplication, $request);
 
-            // Return the CXML definition for this application
-            $cxml = $voiceApplication->cxml_definition;
+            // Execute dynamic routing decision
+            $routingResult = $this->executeDynamicRouting($tenant, $validatedData);
 
-            if (is_array($cxml)) {
-                // If stored as array, convert back to XML string
-                $cxml = $this->arrayToXml($cxml);
-            }
+            // Log routing decision
+            Log::info('Voice application routing completed', [
+                'application_id' => $applicationId,
+                'tenant_id' => $tenant->id,
+                'routing_success' => $routingResult['success'],
+                'routing_type' => $routingResult['routing_type'] ?? 'unknown',
+                'cxml_length' => strlen($routingResult['cxml']),
+            ]);
 
-            return response($cxml, 200, ['Content-Type' => 'application/xml']);
+            return response($routingResult['cxml'], 200, ['Content-Type' => 'application/xml']);
 
         } catch (\Exception $e) {
             Log::error('Voice application request failed', [
@@ -447,15 +453,7 @@ class VoiceApplicationController extends Controller
         }
     }
 
-    /**
-     * Convert array CXML definition back to XML string
-     */
-    private function arrayToXml(array $cxmlArray): string
-    {
-        // Simple conversion - in production you might want a proper XML builder
-        // For now, assume it's stored as XML string in the database
-        return json_encode($cxmlArray);
-    }
+
 
     /**
      * Map Cloudonix status to internal status
@@ -525,5 +523,61 @@ class VoiceApplicationController extends Controller
         return $dispositionMap[strtoupper($cloudonixDisposition)] ?? 'FAILED'; // Default to FAILED
     }
 
+    /**
+     * Execute dynamic routing decision for incoming call
+     */
+    private function executeDynamicRouting(Tenant $tenant, array $callData): array
+    {
+        try {
+            // Get routing services
+            $patternMatcher = app(PatternMatchingService::class);
+            $routingDecision = app(RoutingDecisionService::class);
+
+            // Evaluate routing rules against call data
+            $matchedRule = $patternMatcher->evaluateRules($tenant, $callData);
+
+            if ($matchedRule) {
+                // Execute routing decision for matched rule
+                return $routingDecision->executeRouting($matchedRule, $callData);
+            } else {
+                // No rule matched - return hangup
+                Log::info('No routing rule matched, returning hangup', [
+                    'tenant_id' => $tenant->id,
+                    'call_data' => $callData,
+                ]);
+
+                $cxmlService = app(CxmlService::class);
+                return [
+                    'success' => false,
+                    'cxml' => $cxmlService->generateHangup(),
+                    'routing_type' => 'hangup',
+                    'reason' => 'No matching routing rule found',
+                    'metadata' => [
+                        'hangup_reason' => 'No matching routing rule found',
+                    ],
+                ];
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Dynamic routing execution failed', [
+                'tenant_id' => $tenant->id,
+                'call_data' => $callData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Fallback to hangup on error
+            $cxmlService = app(CxmlService::class);
+            return [
+                'success' => false,
+                'cxml' => $cxmlService->generateHangup(),
+                'routing_type' => 'hangup',
+                'reason' => 'Routing execution failed: ' . $e->getMessage(),
+                'metadata' => [
+                    'error' => $e->getMessage(),
+                ],
+            ];
+        }
+    }
 
 }

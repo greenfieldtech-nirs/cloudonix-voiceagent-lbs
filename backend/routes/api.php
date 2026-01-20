@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\CdrController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\VoiceAgentController;
 use App\Http\Controllers\Api\VoiceApplicationController;
+use App\Http\Controllers\Api\AgentGroupController;
+use App\Http\Controllers\Api\AgentGroupMembershipController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +23,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Authentication routes
+Route::get('/test', function () {
+    return response()->json(['message' => 'API routes are working']);
+});
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
