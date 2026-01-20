@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Strategy Pattern Implementation**: DistributionStrategy interface and factory pattern
 - **LoadBalancedStrategy**: Redis-based rolling window call counting with configurable time windows
 - **PriorityStrategy**: Advanced ordered agent selection with Redis-backed round-robin within priority levels, comprehensive failover logic, validation methods, and UI integration support
-- **RoundRobinStrategy**: Redis-backed rotation pointer with atomic operations
+- **RoundRobinStrategy**: Advanced Redis-backed rotation with capacity weighting, atomic operations, state persistence, and monitoring
 - **Service Registration**: Strategy factory registered in Laravel service container
 - **Database Schema Updates**: Enhanced agent_groups and memberships tables with proper constraints
 
@@ -98,6 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All changes are tracked with corresponding git commits:
 
+- `a58c1c1` - feat: Enhance RoundRobinStrategy with capacity weighting and advanced features (2026-01-20)
 - `9a12623` - feat: Enhance PriorityStrategy with advanced failover and round-robin logic (2026-01-20)
 - `beb803a` - feat: Implement WP3 Step 3.2 - Distribution Strategy Interface and Implementations (2026-01-20)
 - `957a7de` - feat: Implement WP3 Step 3.1 - AgentGroup models and enums (2026-01-20)
