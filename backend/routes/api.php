@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\VoiceApplicationController;
 use App\Http\Controllers\Api\AgentGroupController;
 use App\Http\Controllers\Api\AgentGroupMembershipController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\ExportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -96,6 +97,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('analytics/realtime', [AnalyticsController::class, 'realtime']);
     Route::get('analytics/metrics', [AnalyticsController::class, 'metrics']);
     Route::post('analytics/clear-cache', [AnalyticsController::class, 'clearCache']);
+
+    // Data Export
+    Route::post('exports', [ExportController::class, 'request']);
+    Route::get('exports/fields', [ExportController::class, 'fields']);
+    Route::get('exports/{exportId}/status', [ExportController::class, 'status']);
+    Route::get('exports/{exportId}/download', [ExportController::class, 'download']);
+    Route::post('exports/cleanup', [ExportController::class, 'cleanup']);
 });
 
 // Voice Application Webhook Endpoints (Public - no authentication required)
