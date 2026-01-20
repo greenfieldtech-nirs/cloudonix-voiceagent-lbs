@@ -1,0 +1,183 @@
+# Dependencies
+backend/vendor/
+backend/node_modules/
+frontend/node_modules/
+
+# Laravel
+backend/bootstrap/cache/
+backend/storage/app/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/storage/logs/
+
+# React/Node.js
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/.nuxt/
+frontend/.cache/
+
+# Root level build artifacts
+build/
+dist/
+.next/
+.nuxt/
+.cache/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Docker
+docker/data/
+docker/logs/
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# Laravel specific
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+
+# Composer
+composer.lock
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# MinIO data (if running locally)
+minio-data/
+
+# Redis dumps
+dump.rdb
+
+# Database files
+*.sqlite
+*.db
+
+# Testing
+backend/tests/_output/
+backend/tests/_reports/
+
+# CI/CD
+.github/workflows/
+.gitlab-ci.yml
+
+# Documentation builds
+docs/build/
+docs/.vuepress/dist/
+
+# Local development
+.local
+
+# Docker volumes (local development)
+docker/volumes/
+
+# Laravel Sail
+sail
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Composer
+backend/composer.lock
+
+# NPM
+frontend/package-lock.json
+frontend/yarn.lock
+
+# PHP CS Fixer
+.php-cs-fixer.cache
+
+# PHPUnit
+backend/phpunit.xml
+backend/.phpunit.result.cache
