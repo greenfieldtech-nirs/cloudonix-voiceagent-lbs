@@ -41,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\OutboundRoutingEngine::class, function ($app) {
             return new \App\Services\OutboundRoutingEngine();
         });
+
+        $this->app->singleton(\App\Services\AnalyticsService::class, function ($app) {
+            return new \App\Services\AnalyticsService();
+        });
     }
 
     /**
