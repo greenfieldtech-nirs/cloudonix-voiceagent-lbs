@@ -19,27 +19,33 @@ This tool enables organizations to efficiently route voice calls to multiple AI 
     cd cloudonix-voiceagent-lbs
     ```
 
-2. **Configure environment:**
+2. **Run the setup script:**
     ```bash
-    cp backend/.env.sample backend/.env
-    # Edit backend/.env with your configuration
+    ./setup.sh
     ```
 
-3. **Start all services:**
+3. **Edit environment configuration:**
+    ```bash
+    # The setup script creates backend/.env from template
+    # Edit backend/.env with your specific configuration
+    nano backend/.env
+    ```
+
+4. **Start all services:**
     ```bash
     docker-compose up --build
     ```
 
-4. **Run database migrations:**
+5. **Run database migrations:**
     ```bash
     docker-compose exec app php artisan migrate
     ```
 
-5. **Access the applications:**
+6. **Access the applications:**
     - **Admin Dashboard**: http://localhost:3000 (register first)
     - **API Endpoints**: http://localhost/api
     - **MinIO Console**: http://localhost:9001 (admin/minioadmin)
-    - **Nginx Logs**: Access container logs for debugging
+    - **Nginx Health Check**: http://localhost/health
 
 ### Verification
 ```bash
@@ -60,24 +66,19 @@ curl http://localhost/health
 
 ### ngrok Setup for Cloudonix Webhooks
 
-1. **Install ngrok:**
+1. **Configure ngrok:**
     ```bash
-    # Download from https://ngrok.com/download
-    # Or use brew on macOS: brew install ngrok
+    ./configure-ngrok.sh
+    # Follow the instructions to set up your ngrok auth token
     ```
 
-2. **Configure ngrok:**
-    ```bash
-    ngrok config add-authtoken YOUR_AUTH_TOKEN
-    ```
-
-3. **Start tunnel:**
+2. **Start tunnel:**
     ```bash
     ngrok http 80
     # Copy the https URL for webhook configuration
     ```
 
-4. **Configure Cloudonix:**
+3. **Configure Cloudonix:**
     - Use the ngrok HTTPS URL as your webhook endpoint
     - Example: `https://abc123.ngrok.io/api/voice/application/your-domain`
 
