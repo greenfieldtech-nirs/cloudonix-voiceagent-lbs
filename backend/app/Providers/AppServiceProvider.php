@@ -57,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\WebhookSecurityService::class, function ($app) {
             return new \App\Services\WebhookSecurityService();
         });
+
+        $this->app->singleton(\App\Services\DataProtectionService::class, function ($app) {
+            return new \App\Services\DataProtectionService();
+        });
     }
 
     /**

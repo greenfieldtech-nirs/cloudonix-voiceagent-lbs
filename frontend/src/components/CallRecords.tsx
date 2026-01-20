@@ -50,7 +50,7 @@ const CallRecords: React.FC = () => {
     pageSize: 25,
     total: 0,
   });
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<Record<string, any>>({});
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<CallRecord | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -88,7 +88,7 @@ const CallRecords: React.FC = () => {
       const result = await response.json();
 
       setData(result.data.data);
-      setPagination(prev => ({
+      setPagination((prev: any) => ({
         ...prev,
         total: result.data.total,
       }));
@@ -100,27 +100,27 @@ const CallRecords: React.FC = () => {
   };
 
   const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({
+    setFilters((prev: Record<string, any>) => ({
       ...prev,
       [key]: value,
     }));
-    setPagination(prev => ({ ...prev, current: 1 })); // Reset to first page
+    setPagination((prev: any) => ({ ...prev, current: 1 })); // Reset to first page
   };
 
   const handleDateRangeChange = (dates: any) => {
     if (dates) {
-      setFilters(prev => ({
+      setFilters((prev: Record<string, any>) => ({
         ...prev,
         start_date: dates[0].format('YYYY-MM-DD'),
         end_date: dates[1].format('YYYY-MM-DD'),
       }));
     } else {
-      setFilters(prev => {
+      setFilters((prev: Record<string, any>) => {
         const { start_date, end_date, ...rest } = prev;
         return rest;
       });
     }
-    setPagination(prev => ({ ...prev, current: 1 }));
+    setPagination((prev: any) => ({ ...prev, current: 1 }));
   };
 
   const handleExport = async (format: 'csv' | 'json') => {
@@ -299,15 +299,15 @@ const CallRecords: React.FC = () => {
                 <Input
                   placeholder="Phone number or session"
                   value={filters.from_number || filters.to_number || filters.session_token}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFilters(prev => ({
-                      ...prev,
-                      from_number: value,
-                      to_number: value,
-                      session_token: value,
-                    }));
-                  }}
+                   onChange={(e) => {
+                     const value = e.target.value;
+                     setFilters((prev: Record<string, any>) => ({
+                       ...prev,
+                       from_number: value,
+                       to_number: value,
+                       session_token: value,
+                     }));
+                   }}
                   prefix={<SearchOutlined />}
                 />
               </Form.Item>
