@@ -37,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\CxmlService::class)
             );
         });
+
+        $this->app->singleton(\App\Services\OutboundRoutingEngine::class, function ($app) {
+            return new \App\Services\OutboundRoutingEngine();
+        });
     }
 
     /**
