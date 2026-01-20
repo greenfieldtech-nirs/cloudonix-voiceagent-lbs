@@ -14,6 +14,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('distribution.strategy.factory', function ($app) {
             return new \App\Strategies\DistributionStrategyFactory();
         });
+
+        $this->app->singleton(\App\Services\RedisStrategyService::class, function ($app) {
+            return new \App\Services\RedisStrategyService();
+        });
+
+        $this->app->singleton(\App\Services\StrategyMonitor::class, function ($app) {
+            return new \App\Services\StrategyMonitor($app->make(\App\Services\RedisStrategyService::class));
+        });
     }
 
     /**

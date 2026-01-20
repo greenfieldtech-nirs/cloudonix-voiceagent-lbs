@@ -4,7 +4,7 @@ namespace App\Strategies;
 
 use App\Models\AgentGroup;
 use App\Models\VoiceAgent;
-use Illuminate\Support\Facades\Redis;
+use App\Services\RedisStrategyService;
 use Illuminate\Support\Collection;
 
 /**
@@ -21,11 +21,13 @@ class LoadBalancedStrategy implements DistributionStrategy
 {
     private AgentGroup $group;
     private array $config;
+    private RedisStrategyService $redisService;
 
-    public function __construct(AgentGroup $group)
+    public function __construct(AgentGroup $group, ?RedisStrategyService $redisService = null)
     {
         $this->group = $group;
         $this->config = $group->getMergedSettings();
+        $this->redisService = $redisService ?? app(RedisStrategyService::class);
     }
 
     /**
@@ -60,18 +62,31 @@ class LoadBalancedStrategy implements DistributionStrategy
      */
     public function recordCall(AgentGroup $group, VoiceAgent $agent): void
     {
-        $key = $this->getAgentCallKey($agent->id);
-        $windowSeconds = $this->config['window_hours'] * 3600;
+        $this->redisService->executeWithFallback(
+            function () use ($agent) {
+                $key = $this->getAgentCallKey($agent->id);
+                $windowSeconds = $this->config['window_hours'] * 3600;
 
-        // Add call to sorted set with current timestamp
-        Redis::zadd($key, now()->timestamp, uniqid());
+                // Add call to sorted set with current timestamp
+                \Illuminate\Support\Facades\Redis::zadd($key, now()->timestamp, uniqid());
 
-        // Remove calls older than window
-        $cutoffTime = now()->timestamp - $windowSeconds;
-        Redis::zremrangebyscore($key, '-inf', $cutoffTime);
+                // Remove calls older than window
+                $cutoffTime = now()->timestamp - $windowSeconds;
+                \Illuminate\Support\Facades\Redis::zremrangebyscore($key, '-inf', $cutoffTime);
 
-        // Set expiration on the key (window + buffer)
-        Redis::expire($key, $windowSeconds + 3600);
+                // Set expiration on the key (window + buffer)
+                \Illuminate\Support\Facades\Redis::expire($key, $windowSeconds + 3600);
+            },
+            function () use ($group, $agent) {
+                // Fallback: Log to database or alternative storage
+                \Illuminate\Support\Facades\Log::info('Load balanced call recorded (Redis fallback)', [
+                    'group_id' => $group->id,
+                    'agent_id' => $agent->id,
+                    'strategy' => $this->getStrategyIdentifier(),
+                    'timestamp' => now()->toISOString(),
+                ]);
+            }
+        );
     }
 
     /**

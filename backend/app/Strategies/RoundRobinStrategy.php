@@ -21,11 +21,13 @@ class RoundRobinStrategy implements DistributionStrategy
 {
     private AgentGroup $group;
     private array $config;
+    private \App\Services\RedisStrategyService $redisService;
 
-    public function __construct(AgentGroup $group)
+    public function __construct(AgentGroup $group, ?\App\Services\RedisStrategyService $redisService = null)
     {
         $this->group = $group;
         $this->config = $group->getMergedSettings();
+        $this->redisService = $redisService ?? app(\App\Services\RedisStrategyService::class);
     }
 
     /**
@@ -33,23 +35,41 @@ class RoundRobinStrategy implements DistributionStrategy
      */
     public function selectAgent(AgentGroup $group): ?VoiceAgent
     {
-        $activeAgents = $group->activeAgents()->with('groups')->get();
+        return $this->redisService->executeWithFallback(
+            function () use ($group) {
+                $activeAgents = $group->activeAgents()->with('groups')->get();
 
-        if ($activeAgents->isEmpty()) {
-            return null;
-        }
+                if ($activeAgents->isEmpty()) {
+                    return null;
+                }
 
-        // Check if agent list has changed and reset if needed
-        $agentIds = $activeAgents->pluck('id')->sort()->values();
-        if ($this->shouldResetPointer($agentIds)) {
-            $this->resetPointer();
-        }
+                // Check if agent list has changed and reset if needed
+                $agentIds = $activeAgents->pluck('id')->sort()->values();
+                if ($this->shouldResetPointer($agentIds)) {
+                    $this->resetPointer();
+                }
 
-        if ($this->config['weighted_by_capacity']) {
-            return $this->selectAgentByWeightedCapacity($activeAgents);
-        } else {
-            return $this->selectAgentBySimpleRotation($activeAgents, $agentIds);
-        }
+                if ($this->config['weighted_by_capacity']) {
+                    return $this->selectAgentByWeightedCapacity($activeAgents);
+                } else {
+                    return $this->selectAgentBySimpleRotation($activeAgents, $agentIds);
+                }
+            },
+            function () use ($group) {
+                // Fallback: Simple random selection from active agents
+                $activeAgents = $group->activeAgents()->get();
+                if ($activeAgents->isEmpty()) {
+                    return null;
+                }
+
+                \Illuminate\Support\Facades\Log::warning('Round-robin strategy using fallback selection', [
+                    'group_id' => $group->id,
+                    'active_agents' => $activeAgents->count(),
+                ]);
+
+                return $activeAgents->random();
+            }
+        );
     }
 
     /**
