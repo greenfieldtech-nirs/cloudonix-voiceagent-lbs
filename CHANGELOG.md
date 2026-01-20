@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-01-20
+
+### Added
+- **WP6: Analytics & Dashboard - COMPLETED**: Comprehensive analytics system with real-time dashboard
+- **AnalyticsService**: Real-time metrics calculation with Redis caching and tenant isolation
+- **AnalyticsController**: REST API endpoints for dashboard data with filtering and pagination
+- **ExportService**: Background job processing for CSV/JSON data exports with field selection
+- **ProcessExport Job**: Queue-based export processing with error handling and notifications
+- **ExportController**: Export management API with status tracking and file downloads
+- **Database Optimizations**: Composite indexes for analytics query performance
+- **React Dashboard Component**: Responsive analytics dashboard with metrics visualization
+- **Call Trends Analysis**: Historical data visualization with success rate tracking
+- **Top Agents Ranking**: Agent performance metrics and leaderboards
+
 ## [0.5.0] - 2026-01-20
 
 ### Added
 - **WP5: Outbound Call Routing Engine - COMPLETED**: Full outbound call routing system with trunk management
-- **Trunk Model & Migration**: Cloudonix trunk management with capacity, priority, and configuration
+- **Trunk Model & Migration**: Cloudonix trunk configuration with capacity, priority, and configuration
 - **OutboundRoutingEngine Service**: Rule-based trunk selection for outbound calls
 - **Outbound Call Detection**: Automatic detection of outbound calls via caller ID patterns
 - **Enhanced CXML Service**: Outbound routing CXML generation with trunk-specific attributes
