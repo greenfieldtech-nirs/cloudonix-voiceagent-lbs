@@ -53,6 +53,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\FilterBuilderService::class, function ($app) {
             return new \App\Services\FilterBuilderService();
         });
+
+        $this->app->singleton(\App\Services\WebhookSecurityService::class, function ($app) {
+            return new \App\Services\WebhookSecurityService();
+        });
     }
 
     /**
