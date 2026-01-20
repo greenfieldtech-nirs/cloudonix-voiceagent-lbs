@@ -16,7 +16,7 @@ This tool enables organizations to efficiently route voice calls to multiple AI 
 1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd cloudonix-boilerplate
+    cd cloudonix-voiceagent-lbs
    ```
 
 2. **Start all services:**
@@ -703,7 +703,7 @@ cloudonix-voiceagent-lbs/
 │   └── package.json          # Node.js dependencies
 └── .gitignore                # Git ignore rules
 ```
-cloudonix-boilerplate/
+cloudonix-voiceagent-lbs/
 ├── LICENSE                     # MIT License
 ├── README.md                   # This file
 ├── docker-compose.yml          # Service orchestration
