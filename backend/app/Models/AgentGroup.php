@@ -180,6 +180,10 @@ class AgentGroup extends Model
                 $constraintErrors = $strategy->validateGroupConstraints($this);
                 $errors = array_merge($errors, $constraintErrors);
             }
+            if (method_exists($strategy, 'validateConstraints')) {
+                $strategyErrors = $strategy->validateConstraints($this);
+                $errors = array_merge($errors, $strategyErrors);
+            }
         } catch (\Exception $e) {
             $errors[] = 'Failed to validate strategy configuration: ' . $e->getMessage();
         }
@@ -194,19 +198,49 @@ class AgentGroup extends Model
     {
         try {
             $strategy = $this->getStrategyInstance();
+
+            // Try strategy-specific statistics first
             if (method_exists($strategy, 'getPriorityStatistics')) {
                 return $strategy->getPriorityStatistics($this);
             }
 
+            if (method_exists($strategy, 'getRotationState')) {
+                return $strategy->getRotationState();
+            }
+
+            // Fallback to basic statistics
             return [
                 'strategy' => $this->strategy->value,
                 'total_agents' => $this->memberships()->count(),
                 'active_agents' => $this->getActiveAgentCount(),
+                'enabled' => $this->enabled,
+                'can_route' => $this->canRoute(),
             ];
         } catch (\Exception $e) {
             return [
                 'error' => 'Failed to get strategy statistics: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Reset strategy state (useful for maintenance)
+     */
+    public function resetStrategyState(): bool
+    {
+        try {
+            $strategy = $this->getStrategyInstance();
+            if (method_exists($strategy, 'resetRotationState')) {
+                $strategy->resetRotationState();
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to reset strategy state', [
+                'group_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
         }
     }
 
