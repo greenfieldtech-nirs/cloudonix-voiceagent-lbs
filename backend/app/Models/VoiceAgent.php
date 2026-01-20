@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\VoiceAgentProvider;
+use App\Validators\VoiceAgentProviderValidator;
 
 class VoiceAgent extends Model
 {
@@ -22,6 +24,7 @@ class VoiceAgent extends Model
     protected $casts = [
         'enabled' => 'boolean',
         'metadata' => 'array',
+        'provider' => VoiceAgentProvider::class,
     ];
 
     protected $hidden = [
@@ -30,28 +33,12 @@ class VoiceAgent extends Model
     ];
 
     /**
-     * Supported voice agent providers
+     * Get the provider enum instance
      */
-    public const PROVIDERS = [
-        'synthflow',
-        'dasha',
-        'superdash.ai',
-        'elevenlabs',
-        'deepvox',
-        'relayhawk',
-        'voicehub',
-        'retell-udp',
-        'retell-tcp',
-        'retell-tls',
-        'retell',
-        'vapi',
-        'fonio',
-        'sigmamind',
-        'modon',
-        'puretalk',
-        'millis-us',
-        'millis-eu',
-    ];
+    public function getProviderEnum(): VoiceAgentProvider
+    {
+        return $this->provider;
+    }
 
     /**
      * Get the tenant that owns this voice agent
@@ -132,7 +119,83 @@ class VoiceAgent extends Model
      */
     public function requiresAuthentication(): bool
     {
-        return in_array($this->provider, ['synthflow', 'superdash.ai', 'elevenlabs']);
+        return $this->provider->requiresAuthentication();
+    }
+
+    /**
+     * Get provider display name
+     */
+    public function getProviderDisplayName(): string
+    {
+        return $this->provider->getDisplayName();
+    }
+
+    /**
+     * Get username field label
+     */
+    public function getUsernameLabel(): ?string
+    {
+        return $this->provider->getUsernameLabel();
+    }
+
+    /**
+     * Get password field label
+     */
+    public function getPasswordLabel(): ?string
+    {
+        return $this->provider->getPasswordLabel();
+    }
+
+    /**
+     * Get service value description
+     */
+    public function getServiceValueDescription(): string
+    {
+        return $this->provider->getServiceValueDescription();
+    }
+
+    /**
+     * Validate the voice agent configuration
+     */
+    public function validateConfiguration(): bool
+    {
+        try {
+            $validator = VoiceAgentProviderValidator::createForProvider($this->provider);
+            $data = [
+                'service_value' => $this->service_value,
+                'username' => $this->username,
+                'password' => $this->password,
+                'metadata' => $this->metadata,
+            ];
+
+            $validator->validate($data);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get validation errors for the configuration
+     */
+    public function getValidationErrors(): array
+    {
+        try {
+            $validator = VoiceAgentProviderValidator::createForProvider($this->provider);
+            $data = [
+                'service_value' => $this->service_value,
+                'username' => $this->username,
+                'password' => $this->password,
+                'metadata' => $this->metadata,
+            ];
+
+            $validator->validate($data);
+            return [];
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $e->errors();
+        } catch (\Exception $e) {
+            return ['general' => [$e->getMessage()]];
+        }
     }
 
     /**
