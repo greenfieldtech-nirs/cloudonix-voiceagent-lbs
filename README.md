@@ -150,10 +150,13 @@ curl http://localhost/health
 - **Export Functionality**: CSV/JSON export with field selection
 
 ### ✅ Cloudonix Integration
-- **CXML Generation**: Cloudonix-compliant XML for all routing scenarios
-- **Webhook Processing**: Idempotent handling of voice application requests
-- **State Machine**: Call lifecycle management with 9 distinct states
-- **Provider Templates**: Pre-built CXML templates for all supported providers
+- **Dynamic Call Routing**: Real-time routing decisions based on phone number patterns and agent availability
+- **CXML Generation**: Cloudonix-compliant XML for all routing scenarios with provider support
+- **Webhook Processing**: Complete webhook validation and processing for voice applications, sessions, and CDR
+- **Pattern Matching**: Advanced routing rules with priority-based evaluation and fallback handling
+- **Agent Group Distribution**: Load balancing strategies (Round Robin, Priority, Load Balanced)
+- **State Machine**: Call lifecycle management with 9 distinct states and comprehensive event tracking
+- **Provider Templates**: Pre-built CXML templates for all 18 supported voice AI providers
 
 ### ✅ Authentication & Authorization
 - **Laravel Sanctum**: Token-based API authentication

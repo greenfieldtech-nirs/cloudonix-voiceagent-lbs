@@ -8,12 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - 2026-01-20
 
 ### Added
-- **WP4: Inbound Call Routing Engine - Started**: Cloudonix webhook validation and processing foundation
+- **WP4: Inbound Call Routing Engine - COMPLETED**: Full dynamic call routing system for Cloudonix Voice Applications
 - **CloudonixWebhookValidator Service**: Comprehensive webhook validation with security checks
+- **PatternMatchingService**: Advanced routing rule evaluation with phone number pattern matching
+- **RoutingDecisionService**: Intelligent routing decisions with agent group distribution strategies
+- **Dynamic CXML Generation**: Real-time CXML generation replacing static definitions
 - **Webhook Payload Validation**: Complete validation schemas for voice applications, session updates, and CDR callbacks
 - **Tenant Domain Resolution**: Automatic tenant identification from webhook requests
 - **Webhook Source Validation**: Header, user-agent, and IP-based Cloudonix verification
-- **Enhanced VoiceApplicationController**: Updated with comprehensive validation and error handling
+- **Enhanced VoiceApplicationController**: Complete rewrite with dynamic routing integration
+- **Comprehensive Unit Tests**: Full test coverage for all routing services and components
 
 ## [0.3.0] - 2026-01-20
 
