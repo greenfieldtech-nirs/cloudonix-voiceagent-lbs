@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-20
+
+### Added
+- **WP5: Outbound Call Routing Engine - COMPLETED**: Full outbound call routing system with trunk management
+- **Trunk Model & Migration**: Cloudonix trunk management with capacity, priority, and configuration
+- **OutboundRoutingEngine Service**: Rule-based trunk selection for outbound calls
+- **Outbound Call Detection**: Automatic detection of outbound calls via caller ID patterns
+- **Enhanced CXML Service**: Outbound routing CXML generation with trunk-specific attributes
+- **Unified VoiceApplicationController**: Handles both inbound and outbound routing seamlessly
+- **Outbound Session Tracking**: Call session management for outbound calls
+- **Comprehensive Unit Tests**: Full test coverage for outbound routing components
+
 ## [0.4.0] - 2026-01-20
 
 ### Added
