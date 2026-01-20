@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-20
+
+### Added
+- **WP4: Inbound Call Routing Engine - Started**: Cloudonix webhook validation and processing foundation
+- **CloudonixWebhookValidator Service**: Comprehensive webhook validation with security checks
+- **Webhook Payload Validation**: Complete validation schemas for voice applications, session updates, and CDR callbacks
+- **Tenant Domain Resolution**: Automatic tenant identification from webhook requests
+- **Webhook Source Validation**: Header, user-agent, and IP-based Cloudonix verification
+- **Enhanced VoiceApplicationController**: Updated with comprehensive validation and error handling
+
 ## [0.3.0] - 2026-01-20
 
 ### Added
@@ -102,7 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All changes are tracked with corresponding git commits:
 
-- `5804176` - feat: Implement WP3 Step 3.8 - Comprehensive Strategy Testing Framework (2026-01-20)
+- `61d0428` - feat: Implement WP4 Step 4.1 - Cloudonix Webhook Research and Validation (2026-01-20)
+- `7986620` - docs: Update CHANGELOG and implementation tracker for group membership CRUD completion (2026-01-20)
 - `578bfb9` - feat: Implement WP3 Step 3.7 - Group Membership CRUD Operations (2026-01-20)
 - `beb803a` - feat: Implement WP3 Step 3.2 - Distribution Strategy Interface and Implementations (2026-01-20)
 - `957a7de` - feat: Implement WP3 Step 3.1 - AgentGroup models and enums (2026-01-20)
