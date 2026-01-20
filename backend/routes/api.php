@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\VoiceAgentController;
 use App\Http\Controllers\Api\VoiceApplicationController;
 use App\Http\Controllers\Api\AgentGroupController;
 use App\Http\Controllers\Api\AgentGroupMembershipController;
+use App\Http\Controllers\Api\AnalyticsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -86,6 +87,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('agent-groups/{agent_group}/memberships/bulk-update', [AgentGroupMembershipController::class, 'bulkUpdate']);
     Route::get('agent-groups/{agent_group}/available-agents', [AgentGroupMembershipController::class, 'availableAgents']);
     Route::patch('agent-groups/{agent_group}/memberships/reorder', [AgentGroupMembershipController::class, 'reorder']);
+
+    // Analytics & Dashboard
+    Route::get('analytics/overview', [AnalyticsController::class, 'overview']);
+    Route::get('analytics/trends', [AnalyticsController::class, 'trends']);
+    Route::get('analytics/agents', [AnalyticsController::class, 'agents']);
+    Route::get('analytics/groups', [AnalyticsController::class, 'groups']);
+    Route::get('analytics/realtime', [AnalyticsController::class, 'realtime']);
+    Route::get('analytics/metrics', [AnalyticsController::class, 'metrics']);
+    Route::post('analytics/clear-cache', [AnalyticsController::class, 'clearCache']);
 });
 
 // Voice Application Webhook Endpoints (Public - no authentication required)
