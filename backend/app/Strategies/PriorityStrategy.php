@@ -38,19 +38,85 @@ class PriorityStrategy implements DistributionStrategy
             return null;
         }
 
-        // Get agents ordered by priority (highest first)
-        $prioritizedAgents = $this->getPrioritizedAgents($activeAgents);
+        // Get agents ordered by priority with failover logic
+        $prioritizedAgents = $this->getPrioritizedAgentsWithFailover($activeAgents);
 
         // Return the first available agent
         return $prioritizedAgents->first();
     }
 
     /**
-     * Record a call (no-op for priority strategy)
+     * Record a call (used for analytics and priority validation)
      */
     public function recordCall(AgentGroup $group, VoiceAgent $agent): void
     {
-        // Priority strategy doesn't track metrics, no action needed
+        // Log priority-based routing for analytics
+        \Illuminate\Support\Facades\Log::info('Priority strategy routed call', [
+            'group_id' => $group->id,
+            'group_name' => $group->name,
+            'agent_id' => $agent->id,
+            'agent_name' => $agent->name,
+            'strategy' => $this->getStrategyIdentifier(),
+            'priority_level' => $this->getAgentPriority($agent),
+            'timestamp' => now()->toISOString(),
+        ]);
+
+        // Could also update agent performance metrics here if needed
+    }
+
+    /**
+     * Get the priority level for a specific agent
+     */
+    private function getAgentPriority(VoiceAgent $agent): int
+    {
+        $membership = $agent->groups->find($this->group->id);
+        return $membership ? $membership->pivot->priority : 50;
+    }
+
+    /**
+     * Validate priority constraints for the group
+     */
+    public function validateGroupConstraints(AgentGroup $group): array
+    {
+        $errors = [];
+
+        $memberships = $group->memberships()->with('voiceAgent')->get();
+
+        // Check for duplicate priorities if round-robin is disabled
+        if (!$this->config['round_robin_same_priority']) {
+            $priorities = $memberships->pluck('priority');
+            if ($priorities->duplicates()->isNotEmpty()) {
+                $errors[] = 'Duplicate priorities found. Enable round-robin for same priority or use unique priority values.';
+            }
+        }
+
+        // Validate priority ranges
+        $invalidPriorities = $memberships->filter(function ($membership) {
+            return !\App\Models\AgentGroupMembership::validatePriority($membership->priority);
+        });
+
+        if ($invalidPriorities->isNotEmpty()) {
+            $errors[] = 'All priorities must be between 1 and 100.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get priority distribution statistics
+     */
+    public function getPriorityStatistics(AgentGroup $group): array
+    {
+        $memberships = $group->memberships()->with('voiceAgent')->get();
+
+        return [
+            'total_agents' => $memberships->count(),
+            'active_agents' => $memberships->where('voiceAgent.enabled', true)->count(),
+            'priority_levels' => $memberships->pluck('priority')->unique()->sort()->values(),
+            'agents_by_priority' => $memberships->groupBy('priority')->map->count(),
+            'failover_enabled' => $this->config['failover_enabled'],
+            'round_robin_enabled' => $this->config['round_robin_same_priority'],
+        ];
     }
 
     /**
@@ -70,24 +136,83 @@ class PriorityStrategy implements DistributionStrategy
     }
 
     /**
-     * Get agents ordered by priority with failover logic
+     * Get agents organized by priority levels for UI display
      */
-    private function getPrioritizedAgents(Collection $agents): Collection
+    public function getAgentsByPriority(AgentGroup $group): array
+    {
+        $memberships = $group->memberships()
+            ->with('voiceAgent')
+            ->orderBy('priority', 'desc')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $agentsByPriority = [];
+
+        foreach ($memberships as $membership) {
+            $priority = $membership->priority;
+            $agent = $membership->voiceAgent;
+
+            if (!isset($agentsByPriority[$priority])) {
+                $agentsByPriority[$priority] = [
+                    'priority' => $priority,
+                    'agents' => [],
+                    'rotation_index' => 0, // For round-robin tracking
+                ];
+            }
+
+            $agentsByPriority[$priority]['agents'][] = [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'enabled' => $agent->enabled,
+                'provider' => $agent->provider->value,
+                'capacity' => $membership->capacity,
+                'created_at' => $membership->created_at,
+            ];
+        }
+
+        return array_values($agentsByPriority);
+    }
+
+    /**
+     * Validate and prepare configuration
+     */
+    public static function prepareConfiguration(array $config): array
+    {
+        return array_merge([
+            'failover_enabled' => true,
+            'round_robin_same_priority' => true,
+        ], $config);
+    }
+
+    /**
+     * Get agents ordered by priority with advanced failover logic
+     */
+    private function getPrioritizedAgentsWithFailover(Collection $agents): Collection
     {
         $prioritized = collect();
 
-        // Group agents by priority level
+        // Group agents by priority level (highest first)
         $agentsByPriority = $agents->groupBy(function ($agent) {
             return $agent->groups->find($this->group->id)?->pivot?->priority ?? 50;
-        })->sortKeysDesc(); // Highest priority first
+        })->sortKeysDesc();
 
         foreach ($agentsByPriority as $priority => $priorityAgents) {
-            if ($this->config['round_robin_same_priority']) {
-                // Rotate among agents with same priority
-                $prioritized = $prioritized->merge($this->rotateAgents($priorityAgents));
+            if ($priorityAgents->isEmpty()) {
+                continue;
+            }
+
+            if ($this->config['round_robin_same_priority'] && $priorityAgents->count() > 1) {
+                // Implement round-robin rotation within priority level
+                $rotatedAgents = $this->rotateAgentsInPriorityLevel($priorityAgents, $priority);
+                $prioritized = $prioritized->merge($rotatedAgents);
             } else {
-                // Keep original order for same priority
-                $prioritized = $prioritized->merge($priorityAgents);
+                // Use consistent ordering for same priority
+                $prioritized = $prioritized->merge($this->orderAgentsByCreationTime($priorityAgents));
+            }
+
+            // If failover is disabled, stop after first priority level
+            if (!$this->config['failover_enabled']) {
+                break;
             }
         }
 
@@ -95,17 +220,51 @@ class PriorityStrategy implements DistributionStrategy
     }
 
     /**
-     * Rotate agents within the same priority level
-     * This is a simple implementation - in production you'd want to persist rotation state
+     * Rotate agents within the same priority level using Redis for state persistence
      */
-    private function rotateAgents(Collection $agents): Collection
+    private function rotateAgentsInPriorityLevel(Collection $agents, int $priority): Collection
     {
         if ($agents->count() <= 1) {
             return $agents;
         }
 
-        // For now, just randomize the order
-        // In a real implementation, you'd track the last used agent per priority level
-        return $agents->shuffle();
+        // Sort agents by ID for consistent ordering
+        $sortedAgents = $agents->sortBy('id')->values();
+        $agentCount = $sortedAgents->count();
+
+        // Get rotation index from Redis
+        $rotationKey = $this->getPriorityRotationKey($priority);
+        $currentIndex = (int) \Illuminate\Support\Facades\Redis::get($rotationKey) ?? 0;
+
+        // Rotate the array
+        $rotatedAgents = collect([
+            ...$sortedAgents->slice($currentIndex),
+            ...$sortedAgents->slice(0, $currentIndex)
+        ]);
+
+        // Update rotation index for next call
+        $nextIndex = ($currentIndex + 1) % $agentCount;
+        \Illuminate\Support\Facades\Redis::set($rotationKey, $nextIndex);
+
+        return $rotatedAgents;
+    }
+
+    /**
+     * Order agents by creation time for consistent fallback ordering
+     */
+    private function orderAgentsByCreationTime(Collection $agents): Collection
+    {
+        return $agents->sortBy(function ($agent) {
+            $membership = $agent->groups->find($this->group->id);
+            return $membership ? $membership->pivot->created_at->timestamp : $agent->created_at->timestamp;
+        })->values();
+    }
+
+    /**
+     * Get Redis key for priority level rotation
+     */
+    private function getPriorityRotationKey(int $priority): string
+    {
+        return "priority:{$this->group->id}:level_{$priority}:rotation";
     }
 }

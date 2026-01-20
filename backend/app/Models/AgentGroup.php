@@ -154,6 +154,63 @@ class AgentGroup extends Model
     }
 
     /**
+     * Validate group configuration and constraints
+     */
+    public function validateGroupSetup(): array
+    {
+        $errors = [];
+
+        // Basic validation
+        if (empty($this->name)) {
+            $errors[] = 'Group name is required.';
+        }
+
+        if (!$this->strategy) {
+            $errors[] = 'Distribution strategy must be selected.';
+        }
+
+        // Strategy-specific validation
+        $strategyErrors = $this->strategy->validateSettings($this->settings ?? []);
+        $errors = array_merge($errors, $strategyErrors);
+
+        // Get strategy instance for additional validation
+        try {
+            $strategy = $this->getStrategyInstance();
+            if (method_exists($strategy, 'validateGroupConstraints')) {
+                $constraintErrors = $strategy->validateGroupConstraints($this);
+                $errors = array_merge($errors, $constraintErrors);
+            }
+        } catch (\Exception $e) {
+            $errors[] = 'Failed to validate strategy configuration: ' . $e->getMessage();
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get strategy statistics for monitoring
+     */
+    public function getStrategyStats(): array
+    {
+        try {
+            $strategy = $this->getStrategyInstance();
+            if (method_exists($strategy, 'getPriorityStatistics')) {
+                return $strategy->getPriorityStatistics($this);
+            }
+
+            return [
+                'strategy' => $this->strategy->value,
+                'total_agents' => $this->memberships()->count(),
+                'active_agents' => $this->getActiveAgentCount(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'error' => 'Failed to get strategy statistics: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Get the distribution strategy instance for this group
      */
     public function getStrategyInstance(): \App\Strategies\DistributionStrategy
