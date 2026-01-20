@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealtimeAnalytics } from '../hooks/useWebSocket';
 
 interface CallTrend {
   date: string;
@@ -28,6 +29,7 @@ interface DashboardOverview {
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DashboardOverview | null>(null);
+  const { analytics: realtimeData, isConnected } = useRealtimeAnalytics('1'); // TODO: Get tenant ID from context
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -46,6 +48,20 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
+  // Update data when real-time analytics are received
+  useEffect(() => {
+    if (realtimeData && data) {
+      // Update specific metrics from real-time data
+      if (realtimeData.metrics) {
+        setData(prev => prev ? {
+          ...prev,
+          active_calls: realtimeData.metrics.active_calls || prev.active_calls,
+          calls_today: realtimeData.metrics.calls_today || prev.calls_today,
+        } : null);
+      }
+    }
+  }, [realtimeData]);
+
   if (!data) {
     return <div className="loading">Loading dashboard...</div>;
   }
@@ -54,9 +70,15 @@ const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Voice Agent Analytics Dashboard</h1>
-        <button onClick={fetchDashboardData} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div className="header-controls">
+          <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+            <span className="status-dot"></span>
+            {isConnected ? 'Real-time Connected' : 'Real-time Disconnected'}
+          </div>
+          <button onClick={fetchDashboardData} disabled={loading}>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       <div className="metrics-grid">
@@ -301,6 +323,45 @@ const Dashboard: React.FC = () => {
         button:disabled {
           background: #6c757d;
           cursor: not-allowed;
+        }
+
+        .header-controls {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .connection-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .connection-status.connected {
+          color: #28a745;
+        }
+
+        .connection-status.disconnected {
+          color: #dc3545;
+        }
+
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: currentColor;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
         }
       `}</style>
     </div>

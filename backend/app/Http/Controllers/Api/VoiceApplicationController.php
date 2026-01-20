@@ -501,13 +501,17 @@ class VoiceApplicationController extends Controller
     private function broadcastCallUpdate(CallSession $callSession): void
     {
         try {
-            // TODO: Implement WebSocket broadcasting in Phase 4
-            // For now, just log that we would broadcast
-            Log::info('Call update broadcast (WebSocket not yet implemented)', [
-                'session_id' => $callSession->session_id,
-                'token' => $callSession->token,
+            // Broadcast call status update
+            broadcast(new \App\Events\CallRecordUpdated($callSession->callRecord ?? $callSession, [
                 'status' => $callSession->status,
-                'tenant_id' => $callSession->tenant_id,
+                'direction' => $callSession->direction,
+                'updated_at' => $callSession->updated_at,
+            ]));
+
+            Log::info('Call update broadcasted', [
+                'session_id' => $callSession->session_id,
+                'status' => $callSession->status,
+                'direction' => $callSession->direction,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to broadcast call update', [
@@ -515,6 +519,7 @@ class VoiceApplicationController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
     }
 
     /**
@@ -630,8 +635,11 @@ class VoiceApplicationController extends Controller
 
                 $routingResult['cxml'] = $cxml;
 
-                // Store outbound call session
-                $this->storeOutboundCallSession($tenant, $routingResult);
+            // Store outbound call session
+            $callSession = $this->storeOutboundCallSession($tenant, $routingResult);
+
+            // Broadcast real-time event
+            broadcast(new \App\Events\CallRecordCreated($callSession));
 
             } else {
                 // Generate hangup CXML for failed routing
@@ -666,7 +674,7 @@ class VoiceApplicationController extends Controller
     /**
      * Store outbound call session
      */
-    private function storeOutboundCallSession(Tenant $tenant, array $routingResult): void
+    private function storeOutboundCallSession(Tenant $tenant, array $routingResult): CallSession
     {
         try {
             $callSession = CallSession::create([
@@ -692,12 +700,16 @@ class VoiceApplicationController extends Controller
                 'routing_type' => $routingResult['routing_type'],
             ]);
 
+            return $callSession;
+
         } catch (\Exception $e) {
             Log::error('Failed to store outbound call session', [
                 'tenant_id' => $tenant->id,
                 'routing_result' => $routingResult,
                 'error' => $e->getMessage(),
             ]);
+
+            throw $e;
         }
     }
 

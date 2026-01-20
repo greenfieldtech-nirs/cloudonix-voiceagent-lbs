@@ -311,6 +311,12 @@ class AnalyticsService
                 Cache::store('redis')->keys($pattern)
             );
         }
+
+        // Broadcast cache cleared event
+        broadcast(new \App\Events\AnalyticsUpdated($tenant, [
+            'cache_cleared' => true,
+            'timestamp' => now()->toISOString(),
+        ], 'cache_cleared'));
     }
 
     /**
