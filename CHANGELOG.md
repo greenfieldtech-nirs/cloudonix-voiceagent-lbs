@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-20
+
+### Added
+- **WP3: Agent Group Management - Started**: Foundation models and enums for load balancing strategies
+- **DistributionStrategy Enum**: Load balanced, priority, and round-robin distribution strategies
+- **AgentGroup Model**: Group management with strategy configuration and tenant scoping
+- **AgentGroupMembership Model**: Pivot table for agent-group relationships with priority and capacity
+- **Database Schema Updates**: Enhanced agent_groups and memberships tables with proper constraints
+
 ## [0.2.0] - 2026-01-20
 
 ### Added
@@ -84,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All changes are tracked with corresponding git commits:
 
+- `957a7de` - feat: Implement WP3 Step 3.1 - AgentGroup models and enums (2026-01-20)
 - `64e6a20` - feat: Complete WP2 Voice Agent Management implementation (2026-01-20)
 - `980b694` - docs: Update implementation tracker with WP2 progress (2026-01-20)
 - `0f6ced9` - docs: Update CHANGELOG.md with WP2 Voice Agent Management implementation (2026-01-20)
