@@ -1,0 +1,154 @@
+# Development environment overrides
+# This file is automatically merged with docker-compose.yml when running in development
+# To use: docker-compose up
+
+version: '3.8'
+
+services:
+  # Development Laravel Application with hot reloading
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: development
+    volumes:
+      - ./backend:/var/www/html:cached
+      - /var/www/html/vendor  # Exclude vendor for better performance
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost
+      - LOG_LEVEL=debug
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=cloudonix_voiceagent_lbs
+      - DB_USERNAME=root
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - BROADCAST_DRIVER=log  # Use log driver for development
+      - SANCTUM_STATEFUL_DOMAINS=localhost,127.0.0.1,localhost:3000
+      - VITE_APP_API_URL=http://localhost/api
+    ports:
+      - "8000:9000"  # Expose Laravel dev server for direct access
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=9000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Development React Application with hot reloading
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      target: development
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules  # Named volume for node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost/api
+      - REACT_APP_WS_URL=ws://localhost:8080
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true  # Better file watching in containers
+    command: ["npm", "start"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Development Database with exposed port for direct access
+  db:
+    ports:
+      - "3306:3306"  # Expose MySQL port for development tools
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=cloudonix_voiceagent_lbs
+      - MYSQL_USER=laravel
+      - MYSQL_PASSWORD=password
+    volumes:
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO
+
+  # Development Redis with exposed port
+  redis:
+    ports:
+      - "6379:6379"  # Expose Redis port for development tools
+    command: redis-server --appendonly yes
+
+  # Development MinIO with exposed ports
+  minio:
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Web UI
+    environment:
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_REGION=us-east-1
+
+  # Development queue worker (optional, can be disabled for debugging)
+  queue-worker:
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - LOG_LEVEL=debug
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-jobs=100", "--timeout=90", "--verbose"]
+    profiles:
+      - queue  # Only start with --profile queue
+
+  # Development scheduler (optional)
+  scheduler:
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - LOG_LEVEL=debug
+    profiles:
+      - scheduler  # Only start with --profile scheduler
+
+  # Ngrok for webhook testing (optional)
+  ngrok:
+    image: wernight/ngrok
+    container_name: cloudonix-voiceagent-lbs-ngrok
+    environment:
+      - NGROK_PROTOCOL=http
+      - NGROK_PORT=nginx:80
+      - NGROK_AUTH=${NGROK_AUTH:-}  # Set your ngrok authtoken
+      - NGROK_REGION=us  # Change region as needed
+    depends_on:
+      - nginx
+    networks:
+      - cloudonix-network
+    profiles:
+      - ngrok  # Only start with --profile ngrok
+
+  # MailHog for email testing (optional)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cloudonix-voiceagent-lbs-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - cloudonix-network
+    profiles:
+      - mail  # Only start with --profile mail
+
+volumes:
+  # Override production volumes with development-friendly settings
+  db_data:
+  redis_data:
+  minio_data:

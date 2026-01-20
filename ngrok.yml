@@ -1,0 +1,26 @@
+# ngrok configuration for Cloudonix Voice Agent Load Balancer
+# Place this file at ~/.ngrok2/ngrok.yml or use --config flag
+
+authtoken: ${NGROK_AUTH}  # Set your ngrok authtoken here
+
+tunnels:
+  web:
+    proto: http
+    addr: nginx:80
+    bind_tls: true
+    hostname: ${NGROK_HOSTNAME}  # Optional: reserve a custom domain
+    region: us  # Change region as needed (us, eu, au, ap)
+
+  # Optional: Expose MinIO for file uploads
+  minio:
+    proto: http
+    addr: minio:9000
+    region: us
+
+# Webhook-specific configuration
+web_addr: 4040  # ngrok web interface
+log_level: info
+log_format: json
+
+# Security settings
+inspect_db_size: 0  # Disable request inspection for performance
