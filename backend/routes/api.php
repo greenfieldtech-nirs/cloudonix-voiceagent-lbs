@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\CdrController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\VoiceAgentController;
 use App\Http\Controllers\Api\VoiceApplicationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -58,6 +59,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cdr', [CdrController::class, 'index']);
     Route::get('/cdr/{id}', [CdrController::class, 'show']);
     Route::get('/cdr/export', [CdrController::class, 'export']);
+
+    // Voice Agent Management
+    Route::apiResource('voice-agents', VoiceAgentController::class);
+    Route::patch('voice-agents/{voice_agent}/toggle', [VoiceAgentController::class, 'toggleStatus']);
+    Route::get('voice-agents/{voice_agent}/validate', [VoiceAgentController::class, 'validateConfig']);
+    Route::get('voice-agents/providers', [VoiceAgentController::class, 'providers']);
 });
 
 // Voice Application Webhook Endpoints (Public - no authentication required)
