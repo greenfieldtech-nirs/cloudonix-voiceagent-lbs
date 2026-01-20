@@ -1,6 +1,8 @@
-# Cloudonix Voice Service SaaS Boilerplate
+# Cloudonix Voice Application Tool
 
-A comprehensive boilerplate for building multi-tenant voice services integrated with Cloudonix, featuring complete authentication, real-time call monitoring, historical analytics, and webhook processing. Built with Laravel 12, React, and modern containerization.
+An open-source voice application tool that provides **inbound call load distribution and routing for AI Voice Agents**, plus **outbound call routing controls**, real-time analytics dashboards, and comprehensive call record exports. Built on the Cloudonix Voice SaaS Boilerplate foundation with advanced load balancing strategies, tenant isolation, and extensible voice agent provider support.
+
+This tool enables organizations to efficiently route voice calls to multiple AI agents across different providers using intelligent load balancing algorithms, while providing complete visibility into call performance and agent utilization.
 
 ## 🚀 Quick Start
 
@@ -59,17 +61,20 @@ curl -X POST http://localhost:8000/api/voice/session/cdr \
 
 ### Core Architecture
 
-#### Control Plane (Persistent Data - MariaDB)
+#### Control Plane (Persistent Data - MySQL)
 - **Multi-Tenant System**: Complete tenant isolation with scoped queries
-- **User Management**: Authentication, profiles, and settings
-- **RBAC**: Roles and permissions system
-- **Configuration**: Phone numbers, routing rules, voice applications
-- **Audit Trail**: Call events and historical data
+- **Voice Agent Management**: CRUD operations for AI voice agents across 18+ providers
+- **Agent Groups**: Load balancing groups with configurable distribution strategies
+- **Routing Rules**: Pattern-based inbound routing and trunk-based outbound routing
+- **Call Records**: Comprehensive call logging with agent attribution
+- **Audit Trail**: Webhook events and system activity logging
 
 #### Execution Plane (Runtime State - Redis)
-- **Call Sessions**: Real-time call state management
-- **Webhook Processing**: Event-driven updates with idempotency
-- **Live Monitoring**: Active call tracking and statistics
+- **Load Balancing Memory**: Ephemeral counters for real-time agent utilization
+- **Session State**: Call lifecycle management with state machine transitions
+- **Idempotency Keys**: Webhook deduplication with automatic cleanup
+- **Distributed Locks**: Race condition prevention for routing decisions
+- **Real-Time Events**: Live dashboard updates and agent status broadcasting
 
 ## 🔧 Implemented Features
 
@@ -79,39 +84,291 @@ curl -X POST http://localhost:8000/api/voice/session/cdr \
 - **Tenant Management**: Admin interface for tenant configuration
 - **Data Security**: Complete separation between tenant data
 
+### ✅ Voice Agent Management
+- **Provider Support**: 18+ AI voice providers (VAPI, Synthflow, Dasha, Eleven Labs, etc.)
+- **Agent Configuration**: Service value, authentication credentials, metadata
+- **Real-Time Status**: Enable/disable agents with immediate routing impact
+- **Provider Validation**: Type-specific validation for each voice agent provider
+
+### ✅ Agent Group Load Balancing
+- **Distribution Strategies**: Load Balanced, Priority, and Round Robin algorithms
+- **Redis Memory**: Ephemeral counters for real-time load distribution
+- **Group Membership**: Drag-and-drop agent assignment with capacity weights
+- **Strategy Configuration**: Rolling windows, fallback behavior, priority ordering
+
+### ✅ Intelligent Call Routing
+- **Inbound Routing**: Pattern-based routing to agents or groups
+- **Outbound Routing**: Trunk-based routing with caller ID detection
+- **Fallback Logic**: Automatic fallback to alternative agents/groups
+- **Rule Management**: Priority-based rule evaluation and conflict resolution
+
+### ✅ Real-Time Analytics Dashboard
+- **Live Metrics**: Calls/day, success rates, active calls with real-time updates
+- **Agent Performance**: Utilization tracking and performance analytics
+- **Group Statistics**: Load distribution and efficiency metrics
+- **WebSocket Updates**: Live dashboard without polling
+
+### ✅ Call Record Management
+- **Comprehensive Logging**: All call events with agent and group attribution
+- **Advanced Filtering**: By agent, group, date range, status, duration
+- **Audit Trail**: Webhook processing history and system events
+- **Export Functionality**: CSV/JSON export with field selection
+
+### ✅ Cloudonix Integration
+- **CXML Generation**: Cloudonix-compliant XML for all routing scenarios
+- **Webhook Processing**: Idempotent handling of voice application requests
+- **State Machine**: Call lifecycle management with 9 distinct states
+- **Provider Templates**: Pre-built CXML templates for all supported providers
+
 ### ✅ Authentication & Authorization
 - **Laravel Sanctum**: Token-based API authentication
 - **Registration/Login**: Complete user lifecycle management
 - **Profile Management**: User settings and password changes
 - **Protected Routes**: JWT token validation on all admin endpoints
 
-### ✅ Cloudonix Integration
-- **Voice Application Webhooks**: Handle incoming call requests
-- **Session Update Webhooks**: Real-time call status updates
-- **CDR Processing**: Call Detail Record ingestion and storage
-- **Webhook Validation**: Basic security checks on incoming webhooks
-
-### ✅ Real-Time Call Monitoring
-- **Live Calls Page**: Active call display with auto-refresh
-- **Call Statistics**: Active calls, completion rates, totals
-- **Status Indicators**: Visual call state representation
-- **Manual Refresh**: User-controlled data updates
-
-### ✅ Historical Call Analytics
-- **Call Logs Page**: Complete CDR data with advanced filtering
-- **Statistics Dashboard**: 6 key metrics in real-time
-- **Advanced Filtering**: By phone numbers, disposition, date ranges, tokens
-- **Pagination**: Efficient handling of large datasets
-- **Export Ready**: CSV export functionality prepared
-
-### ✅ Admin Interface
-- **Dashboard**: Overview with key metrics
-- **User Management**: Profile and settings management
-- **Call Monitoring**: Live calls and historical logs
-- **Responsive Design**: Mobile-friendly interface
-- **Toast Notifications**: User feedback system
-
 ## 📡 API Documentation
+
+### Voice Agent Management Endpoints
+
+#### List Voice Agents
+```http
+GET /api/voice-agents?page=1&per_page=20&search=support&enabled=true&provider=vapi
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `per_page`: Items per page (default: 20, max: 100)
+- `search`: Search in agent names
+- `enabled`: Filter by enabled status
+- `provider`: Filter by provider type
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "tenant_id": 1,
+      "name": "Customer Support Agent",
+      "provider": "vapi",
+      "service_value": "agent_12345",
+      "enabled": true,
+      "metadata": {
+        "region": "us-east",
+        "language": "en-US"
+      },
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 20,
+    "total": 1
+  }
+}
+```
+
+#### Create Voice Agent
+```http
+POST /api/voice-agents
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Sales Agent",
+  "provider": "synthflow",
+  "service_value": "https://api.synthflow.com/agent/123",
+  "username": "api_key_123",
+  "password": "secret_key_456",
+  "enabled": true,
+  "metadata": {
+    "department": "sales",
+    "priority": "high"
+  }
+}
+```
+
+#### Update Voice Agent
+```http
+PUT /api/voice-agents/1
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Updated Sales Agent",
+  "enabled": false
+}
+```
+
+#### Toggle Agent Status
+```http
+PATCH /api/voice-agents/1/toggle
+Authorization: Bearer YOUR_TOKEN
+```
+
+### Agent Group Management Endpoints
+
+#### List Agent Groups
+```http
+GET /api/agent-groups?page=1&per_page=20&strategy=load_balanced
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "tenant_id": 1,
+      "name": "Support Team",
+      "strategy": "load_balanced",
+      "settings": {
+        "window_hours": 24,
+        "fallback_enabled": true
+      },
+      "agents": [
+        {
+          "id": 1,
+          "name": "Agent 1",
+          "provider": "vapi",
+          "pivot": {
+            "priority": 1,
+            "capacity": 2
+          }
+        }
+      ],
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+#### Create Agent Group
+```http
+POST /api/agent-groups
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Emergency Support",
+  "strategy": "priority",
+  "settings": {
+    "fallback_enabled": true
+  }
+}
+```
+
+#### Add Agent to Group
+```http
+POST /api/agent-groups/1/members
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "agent_id": 2,
+  "priority": 2,
+  "capacity": 1
+}
+```
+
+### Routing Rules Endpoints
+
+#### Get Inbound Routing Rules
+```http
+GET /api/inbound-routing-rules
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "tenant_id": 1,
+    "pattern": "+1234567890",
+    "target_type": "group",
+    "target_id": 1,
+    "priority": 1,
+    "enabled": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### Create Inbound Routing Rule
+```http
+POST /api/inbound-routing-rules
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "pattern": "+1555*",
+  "target_type": "agent",
+  "target_id": 2,
+  "priority": 2,
+  "enabled": true
+}
+```
+
+### Analytics Endpoints
+
+#### Get Analytics Metrics
+```http
+GET /api/analytics/metrics?start_date=2024-01-01&end_date=2024-01-31&agent_id=1
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Response:**
+```json
+{
+  "calls_today": 150,
+  "success_rate": 0.95,
+  "avg_duration": 180,
+  "active_calls": 3,
+  "trends": [
+    {
+      "date": "2024-01-01",
+      "calls": 120,
+      "success_rate": 0.94
+    }
+  ]
+}
+```
+
+#### Get Call Records
+```http
+GET /api/analytics/call-records?page=1&per_page=50&agent_id=1&start_date=2024-01-01
+Authorization: Bearer YOUR_TOKEN
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "session_token": "session_123",
+      "direction": "inbound",
+      "from_number": "+1234567890",
+      "to_number": "+0987654321",
+      "agent_id": 1,
+      "group_id": null,
+      "status": "completed",
+      "start_time": "2024-01-01T10:00:00Z",
+      "end_time": "2024-01-01T10:02:30Z",
+      "duration": 150,
+      "created_at": "2024-01-01T10:02:35Z"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 50,
+    "total": 1000
+  }
+}
+```
 
 ### Authentication Endpoints
 
@@ -268,22 +525,54 @@ Authorization: Bearer YOUR_TOKEN
 
 ### Webhook Endpoints
 
-#### Voice Application Request
+#### Voice Application Webhook
 ```http
-POST /api/voice/application/{applicationId}
-Content-Type: application/xml
-X-Cloudonix-Signature: signature_here
+POST /api/voice/application/{domain}
+Content-Type: application/x-www-form-urlencoded
+X-CX-APIKey: api_key_here
+X-CX-Domain: tenant.cloudonix.com
 
-<?xml version="1.0" encoding="UTF-8"?>
-<Request>
-  <CallSid>CA1234567890</CallSid>
-  <From>+1234567890</From>
-  <To>+0987654321</To>
-  <!-- Additional Cloudonix parameters -->
-</Request>
+CallSid=CA1234567890&From=%2B1234567890&To=%2B0987654321&Direction=inbound&Session=session_123
 ```
 
-Response: CXML instructions for call handling
+**Response:** CXML routing instructions
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="+1234567890" action="/api/voice/callback" method="POST">
+    <Service provider="vapi">agent_12345</Service>
+  </Dial>
+</Response>
+```
+
+#### Session Update Webhook
+```http
+POST /api/voice/session/update/{domain}
+Content-Type: application/json
+
+{
+  "CallSid": "CA1234567890",
+  "Session": "session_123",
+  "CallStatus": "completed",
+  "Duration": 150
+}
+```
+
+#### CDR Webhook
+```http
+POST /api/voice/session/cdr/{domain}
+Content-Type: application/json
+
+{
+  "call_id": "CA1234567890",
+  "session_token": "session_123",
+  "from": "+1234567890",
+  "to": "+0987654321",
+  "disposition": "ANSWER",
+  "duration": 150,
+  "start_time": "2024-01-01T10:00:00Z"
+}
+```
 
 #### Session Update Webhook
 ```http
@@ -332,6 +621,87 @@ Content-Type: application/json
 
 ## 📁 Project Structure
 
+```
+cloudonix-voiceagent-lbs/
+├── LICENSE                     # MIT License
+├── README.md                   # This file
+├── CHANGELOG.md                # Version history and changes
+├── AGENTS.md                   # Development system documentation
+├── docker-compose.yml          # Service orchestration
+├── planning/                   # Project planning documents
+│   ├── 01_Product_Requirements_Document.md
+│   ├── 02_Product_Specification.md
+│   ├── 03_Implementation_Plans.md
+│   └── 04_Implementation_Tracker.md
+├── docker/
+│   ├── app/                    # Laravel container (PHP 8.4)
+│   │   ├── Dockerfile
+│   │   └── supervisord.conf
+│   ├── web/                    # React container (Node.js)
+│   │   ├── Dockerfile
+│   │   └── nginx.conf
+│   └── db/                     # Database initialization
+│       └── init.sql
+├── backend/                    # Laravel 12 application
+│   ├── app/
+│   │   ├── Models/            # Eloquent models (15+ models)
+│   │   │   ├── Tenant.php
+│   │   │   ├── User.php
+│   │   │   ├── Role.php
+│   │   │   ├── Permission.php
+│   │   │   ├── PhoneNumber.php
+│   │   │   ├── RoutingRule.php
+│   │   │   ├── VoiceApplication.php
+│   │   │   ├── Integration.php
+│   │   │   ├── CallSession.php
+│   │   │   ├── CallEvent.php
+│   │   │   ├── CdrLog.php
+│   │   │   ├── VoiceAgent.php     # NEW: Voice agent management
+│   │   │   ├── AgentGroup.php     # NEW: Load balancing groups
+│   │   │   ├── InboundRoutingRule.php  # NEW: Routing rules
+│   │   │   ├── OutboundRoutingRule.php # NEW: Outbound routing
+│   │   │   ├── CallRecord.php     # NEW: Enhanced call logging
+│   │   │   └── WebhookAudit.php   # NEW: Event audit trail
+│   │   ├── Services/            # NEW: Business logic services
+│   │   │   ├── RedisKeyPatterns.php
+│   │   │   ├── RedisService.php
+│   │   │   ├── CallStateMachine.php
+│   │   │   ├── IdempotencyService.php
+│   │   │   └── CxmlService.php
+│   │   └── Api/Contracts/       # NEW: API specifications
+│   │       └── ApiContracts.php
+│   ├── database/migrations/    # Database schema (20+ migrations)
+│   ├── routes/
+│   │   └── api.php            # API route definitions
+│   ├── tests/                 # PHPUnit tests
+│   │   ├── Feature/
+│   │   │   ├── AuthControllerTest.php
+│   │   │   ├── CallStateMachineTest.php    # NEW: State machine tests
+│   │   │   ├── IdempotencyServiceTest.php  # NEW: Idempotency tests
+│   │   │   ├── CxmlServiceTest.php         # NEW: CXML generation tests
+│   │   │   └── VoiceApplicationControllerTest.php
+│   │   └── Unit/
+│   ├── REDIS_ARCHITECTURE.md  # NEW: Redis usage documentation
+│   ├── api-documentation.json # NEW: OpenAPI specification
+│   └── composer.json          # PHP dependencies
+├── frontend/                   # React 19 application
+│   ├── src/
+│   │   ├── components/        # Reusable React components
+│   │   │   ├── AdminLayout.tsx
+│   │   │   │   ├── toast/        # Notification system
+│   │   │   │   └── ...
+│   │   ├── pages/            # Page components
+│   │   │   ├── LandingPage.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Register.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── LiveCalls.tsx
+│   │   │   ├── CallLogs.tsx
+│   │   │   └── ...
+│   │   ├── App.tsx           # Main application component
+│   │   └── index.tsx         # Application entry point
+│   └── package.json          # Node.js dependencies
+└── .gitignore                # Git ignore rules
 ```
 cloudonix-boilerplate/
 ├── LICENSE                     # MIT License
@@ -565,9 +935,16 @@ curl http://localhost:8000/api/cdr \
 | `permissions` | RBAC permissions | `id`, `name`, `guard_name` |
 | `role_user` | User-role assignments | `user_id`, `role_id` |
 | `permission_role` | Role-permission assignments | `permission_id`, `role_id` |
+| `voice_agents` | AI voice agent configurations | `id`, `tenant_id`, `name`, `provider`, `service_value`, `enabled` |
+| `agent_groups` | Load balancing groups | `id`, `tenant_id`, `name`, `strategy`, `settings` |
+| `agent_group_memberships` | Group-agent relationships | `group_id`, `agent_id`, `priority`, `capacity` |
+| `inbound_routing_rules` | Call routing rules | `id`, `tenant_id`, `pattern`, `target_type`, `target_id`, `priority` |
+| `outbound_routing_rules` | Outbound routing rules | `id`, `tenant_id`, `caller_id`, `destination_pattern`, `trunk_config` |
+| `call_records` | Enhanced call logging | `id`, `tenant_id`, `session_token`, `agent_id`, `group_id`, `status`, `duration` |
+| `webhook_audit` | Event processing audit | `id`, `tenant_id`, `event_type`, `session_token`, `payload`, `processed_at` |
 | `integrations` | Cloudonix API credentials | `id`, `tenant_id`, `provider`, `credentials` |
 | `phone_numbers` | Phone number management | `id`, `tenant_id`, `number`, `capabilities` |
-| `routing_rules` | Call routing logic | `id`, `tenant_id`, `pattern`, `action` |
+| `routing_rules` | Legacy routing logic | `id`, `tenant_id`, `pattern`, `action` |
 | `voice_applications` | CXML application definitions | `id`, `tenant_id`, `provider_app_id`, `cxml_definition` |
 | `call_sessions` | Runtime call state | `id`, `tenant_id`, `session_id`, `token`, `status` |
 | `call_events` | Webhook event audit | `id`, `tenant_id`, `call_session_id`, `event_type`, `payload` |
@@ -578,6 +955,11 @@ curl http://localhost:8000/api/cdr \
 - **Tenant → All other entities**: One-to-many (scoped queries)
 - **Users → Roles**: Many-to-many via `role_user`
 - **Roles → Permissions**: Many-to-many via `permission_role`
+- **Voice Agents → Agent Groups**: Many-to-many via `agent_group_memberships`
+- **Agent Groups → Voice Agents**: Many-to-many via `agent_group_memberships`
+- **Inbound Rules → Voice Agents/Groups**: Polymorphic via `target_type`/`target_id`
+- **Call Records → Voice Agents/Groups**: Optional foreign keys
+- **Webhook Audit → Call Records**: Reference via `session_token`
 - **Call Sessions → Call Events**: One-to-many
 - **CDR Logs → Call Sessions**: Reference via `session_token`
 
@@ -632,12 +1014,14 @@ We welcome contributions to improve the Cloudonix Voice Service SaaS Boilerplate
 - **Testing**: Add tests for new features and bug fixes
 
 ### Areas for Contribution
-- **Cloudonix API Integration**: Enhanced API client with full Cloudonix API coverage
-- **Real-Time Features**: WebSocket/SSE implementation for live updates
-- **Admin UI**: Complete tenant management and RBAC interfaces
-- **Export Features**: CSV/PDF export for call logs and reports
-- **Monitoring**: Application performance monitoring and alerting
-- **Documentation**: API documentation, deployment guides, tutorials
+- **Voice Agent Providers**: Support for additional AI voice providers (Google Dialogflow, IBM Watson, etc.)
+- **Load Balancing Algorithms**: Advanced distribution strategies (geographic routing, skill-based routing)
+- **Real-Time Dashboard**: Enhanced analytics with custom metrics and visualizations
+- **Admin UI**: Complete voice agent management interface with drag-and-drop configuration
+- **Integration APIs**: Third-party CRM and helpdesk system integrations
+- **Performance Optimization**: High-volume call processing and Redis clustering
+- **Monitoring**: Advanced alerting and predictive analytics for agent utilization
+- **Documentation**: Voice agent setup guides and troubleshooting manuals
 
 ### Pull Request Process
 1. Update the README.md if you add new features
@@ -656,11 +1040,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **React**: A JavaScript library for building user interfaces
 - **Cloudonix**: Voice communication platform
 - **Docker**: Containerization platform
-- **MariaDB**: Reliable SQL database
-- **Redis**: In-memory data structure store
+- **MySQL**: Reliable SQL database for persistent data
+- **Redis**: In-memory data structure store for real-time operations
 - **MinIO**: S3-compatible object storage
+- **AI Voice Providers**: VAPI, Synthflow, Dasha, Eleven Labs, and all supported providers
+- **Open Source Community**: For the tools and libraries that make this possible
 
 ---
 
-Built with ❤️ for the voice communication community</content>
+Built with ❤️ for organizations leveraging AI voice agents in their communication workflows</content>
 <parameter name="filePath">README.md
