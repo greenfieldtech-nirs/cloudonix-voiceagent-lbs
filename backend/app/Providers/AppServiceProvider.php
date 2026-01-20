@@ -11,7 +11,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton('distribution.strategy.factory', function ($app) {
+            return new \App\Strategies\DistributionStrategyFactory();
+        });
     }
 
     /**

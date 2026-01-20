@@ -156,9 +156,8 @@ class AgentGroup extends Model
     /**
      * Get the distribution strategy instance for this group
      */
-    public function getStrategyInstance()
+    public function getStrategyInstance(): \App\Strategies\DistributionStrategy
     {
-        // This will be implemented in Step 3.2
         return app('distribution.strategy.factory')->create($this);
     }
 
