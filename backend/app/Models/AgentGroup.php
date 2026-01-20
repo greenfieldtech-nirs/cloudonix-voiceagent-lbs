@@ -2,50 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\DistributionStrategy;
 
+/**
+ * Agent Group Model
+ *
+ * Represents a group of voice agents with a specific distribution strategy.
+ * Groups allow for load balancing and routing rules to distribute calls
+ * among multiple agents using different algorithms.
+ */
 class AgentGroup extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'tenant_id',
         'name',
+        'description',
         'strategy',
         'settings',
+        'enabled',
     ];
 
     protected $casts = [
+        'strategy' => DistributionStrategy::class,
         'settings' => 'array',
+        'enabled' => 'boolean',
     ];
 
     /**
-     * Supported distribution strategies
-     */
-    public const STRATEGIES = [
-        'load_balanced',
-        'priority',
-        'round_robin',
-    ];
-
-    /**
-     * Default settings for strategies
-     */
-    public const DEFAULT_SETTINGS = [
-        'load_balanced' => [
-            'window_hours' => 24,
-            'fallback_enabled' => true,
-        ],
-        'priority' => [
-            'fallback_enabled' => true,
-        ],
-        'round_robin' => [
-            'fallback_enabled' => true,
-        ],
-    ];
-
-    /**
-     * Get the tenant that owns this group
+     * Get the tenant that owns this agent group
      */
     public function tenant(): BelongsTo
     {
@@ -53,31 +43,47 @@ class AgentGroup extends Model
     }
 
     /**
-     * Get the agents in this group
+     * Get the agents in this group through the membership pivot
      */
     public function agents(): BelongsToMany
     {
         return $this->belongsToMany(VoiceAgent::class, 'agent_group_memberships')
-            ->withPivot('priority', 'capacity')
+            ->withPivot(['priority', 'capacity', 'created_at', 'updated_at'])
             ->withTimestamps()
-            ->orderBy('agent_group_memberships.priority')
-            ->orderBy('agent_group_memberships.capacity', 'desc');
+            ->orderByPivot('priority', 'desc')
+            ->orderByPivot('created_at', 'asc');
     }
 
     /**
-     * Get the call records for this group
+     * Get the active agents in this group (enabled agents)
      */
-    public function callRecords()
+    public function activeAgents(): BelongsToMany
     {
-        return $this->hasMany(CallRecord::class, 'group_id');
+        return $this->agents()->where('voice_agents.enabled', true);
     }
 
     /**
-     * Get enabled agents in this group
+     * Get the memberships for this group
      */
-    public function enabledAgents()
+    public function memberships()
     {
-        return $this->agents()->enabled();
+        return $this->hasMany(AgentGroupMembership::class);
+    }
+
+    /**
+     * Scope to only enabled groups
+     */
+    public function scopeEnabled($query)
+    {
+        return $query->where('enabled', true);
+    }
+
+    /**
+     * Scope to specific strategy
+     */
+    public function scopeStrategy($query, DistributionStrategy $strategy)
+    {
+        return $query->where('strategy', $strategy);
     }
 
     /**
@@ -85,38 +91,100 @@ class AgentGroup extends Model
      */
     public function getStrategyDisplayName(): string
     {
-        return match($this->strategy) {
-            'load_balanced' => 'Load Balanced',
-            'priority' => 'Priority',
-            'round_robin' => 'Round Robin',
-            default => ucfirst(str_replace('_', ' ', $this->strategy)),
-        };
+        return $this->strategy->getDisplayName();
     }
 
     /**
-     * Get merged settings with defaults
+     * Get strategy description
+     */
+    public function getStrategyDescription(): string
+    {
+        return $this->strategy->getDescription();
+    }
+
+    /**
+     * Check if strategy requires ordering
+     */
+    public function requiresOrdering(): bool
+    {
+        return $this->strategy->requiresOrdering();
+    }
+
+    /**
+     * Get merged settings (defaults + custom)
      */
     public function getMergedSettings(): array
     {
         return array_merge(
-            self::DEFAULT_SETTINGS[$this->strategy] ?? [],
+            $this->strategy->getDefaultSettings(),
             $this->settings ?? []
         );
     }
 
     /**
-     * Check if fallback is enabled
+     * Validate group settings
      */
-    public function hasFallbackEnabled(): bool
+    public function validateSettings(): array
     {
-        return $this->getMergedSettings()['fallback_enabled'] ?? true;
+        return $this->strategy->validateSettings($this->settings ?? []);
     }
 
     /**
-     * Get window hours for load balanced strategy
+     * Check if group has any active agents
      */
-    public function getLoadBalanceWindowHours(): int
+    public function hasActiveAgents(): bool
     {
-        return $this->getMergedSettings()['window_hours'] ?? 24;
+        return $this->activeAgents()->exists();
+    }
+
+    /**
+     * Get count of active agents
+     */
+    public function getActiveAgentCount(): int
+    {
+        return $this->activeAgents()->count();
+    }
+
+    /**
+     * Check if group can be used for routing
+     */
+    public function canRoute(): bool
+    {
+        return $this->enabled && $this->hasActiveAgents();
+    }
+
+    /**
+     * Get the distribution strategy instance for this group
+     */
+    public function getStrategyInstance()
+    {
+        // This will be implemented in Step 3.2
+        return app('distribution.strategy.factory')->create($this);
+    }
+
+    /**
+     * Select next agent using the group's strategy
+     */
+    public function selectNextAgent(): ?VoiceAgent
+    {
+        if (!$this->canRoute()) {
+            return null;
+        }
+
+        $strategy = $this->getStrategyInstance();
+        return $strategy->selectAgent($this);
+    }
+
+    /**
+     * Record a call for an agent (for load balancing metrics)
+     */
+    public function recordCall(VoiceAgent $agent): void
+    {
+        if (!$this->agents()->where('voice_agent_id', $agent->id)->exists()) {
+            return; // Agent not in this group
+        }
+
+        $strategy = $this->getStrategyInstance();
+        $strategy->recordCall($this, $agent);
     }
 }

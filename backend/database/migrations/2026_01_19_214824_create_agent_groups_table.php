@@ -15,11 +15,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
             $table->string('name');
+            $table->text('description')->nullable();
             $table->enum('strategy', ['load_balanced', 'priority', 'round_robin']);
             $table->json('settings')->nullable(); // Strategy-specific configuration
+            $table->boolean('enabled')->default(true);
             $table->timestamps();
 
-            $table->index(['tenant_id', 'strategy'], 'idx_tenant_strategy');
+            $table->index(['tenant_id', 'enabled'], 'idx_agent_groups_tenant_enabled');
+            $table->index(['tenant_id', 'strategy'], 'idx_agent_groups_tenant_strategy');
             $table->unique(['tenant_id', 'name'], 'unique_tenant_group_name');
         });
     }

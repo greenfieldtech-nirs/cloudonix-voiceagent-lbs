@@ -13,15 +13,18 @@ return new class extends Migration
     {
         Schema::create('agent_group_memberships', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('group_id')->constrained('agent_groups')->onDelete('cascade');
-            $table->foreignId('agent_id')->constrained('voice_agents')->onDelete('cascade');
-            $table->integer('priority')->nullable(); // For priority strategy ordering
-            $table->integer('capacity')->default(1); // Relative capacity weight
+            $table->foreignId('agent_group_id')->constrained()->onDelete('cascade');
+            $table->foreignId('voice_agent_id')->constrained()->onDelete('cascade');
+            $table->unsignedTinyInteger('priority')->default(50); // 1-100, higher = higher priority
+            $table->unsignedSmallInteger('capacity')->nullable(); // Max concurrent calls, null = unlimited
             $table->timestamps();
 
-            $table->unique(['group_id', 'agent_id'], 'unique_group_agent');
-            $table->index(['group_id', 'priority'], 'idx_group_priority');
-            $table->index(['group_id', 'capacity'], 'idx_group_capacity');
+            // Composite unique constraint
+            $table->unique(['agent_group_id', 'voice_agent_id'], 'unique_group_agent_membership');
+
+            // Indexes
+            $table->index(['agent_group_id', 'priority'], 'idx_memberships_group_priority');
+            $table->index(['voice_agent_id'], 'idx_memberships_agent');
         });
     }
 
