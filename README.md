@@ -14,26 +14,32 @@ This tool enables organizations to efficiently route voice calls to multiple AI 
 ### Setup and Run
 
 1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
+    ```bash
+    git clone <repository-url>
     cd cloudonix-voiceagent-lbs
-   ```
+    ```
 
-2. **Start all services:**
-   ```bash
-   docker-compose up --build
-   ```
+2. **Configure environment:**
+    ```bash
+    cp backend/.env.sample backend/.env
+    # Edit backend/.env with your configuration
+    ```
 
-3. **Run database migrations:**
-   ```bash
-   docker-compose exec app php artisan migrate
-   ```
+3. **Start all services:**
+    ```bash
+    docker-compose up --build
+    ```
 
-4. **Access the applications:**
-   - **Landing Page**: http://localhost:3000
-   - **Admin Dashboard**: http://localhost:3000/admin (register first)
-   - **Laravel API**: http://localhost:8000
-   - **MinIO Console**: http://localhost:9001 (admin/minioadmin)
+4. **Run database migrations:**
+    ```bash
+    docker-compose exec app php artisan migrate
+    ```
+
+5. **Access the applications:**
+    - **Admin Dashboard**: http://localhost:3000 (register first)
+    - **API Endpoints**: http://localhost/api
+    - **MinIO Console**: http://localhost:9001 (admin/minioadmin)
+    - **Nginx Logs**: Access container logs for debugging
 
 ### Verification
 ```bash
@@ -41,13 +47,39 @@ This tool enables organizations to efficiently route voice calls to multiple AI 
 docker-compose ps
 
 # Test API connectivity
-curl http://localhost:8000/api/user -H "Authorization: Bearer YOUR_TOKEN"
+curl http://localhost/api/user -H "Authorization: Bearer YOUR_TOKEN"
 
 # Test webhook endpoint (should return 400 for invalid requests)
-curl -X POST http://localhost:8000/api/voice/session/cdr \
+curl -X POST http://localhost/api/voice/session/cdr \
   -H "Content-Type: application/json" \
   -d '{}'
+
+# Test nginx health
+curl http://localhost/health
 ```
+
+### ngrok Setup for Cloudonix Webhooks
+
+1. **Install ngrok:**
+    ```bash
+    # Download from https://ngrok.com/download
+    # Or use brew on macOS: brew install ngrok
+    ```
+
+2. **Configure ngrok:**
+    ```bash
+    ngrok config add-authtoken YOUR_AUTH_TOKEN
+    ```
+
+3. **Start tunnel:**
+    ```bash
+    ngrok http 80
+    # Copy the https URL for webhook configuration
+    ```
+
+4. **Configure Cloudonix:**
+    - Use the ngrok HTTPS URL as your webhook endpoint
+    - Example: `https://abc123.ngrok.io/api/voice/application/your-domain`
 
 ## 🏗️ Architecture Overview
 
@@ -57,6 +89,8 @@ curl -X POST http://localhost:8000/api/voice/session/cdr \
 - **Database**: MariaDB 10.11 (persistent data)
 - **Cache/Queues**: Redis 7 (ephemeral state)
 - **Storage**: MinIO (S3-compatible object storage)
+- **Web Server**: Nginx (reverse proxy and load balancer)
+- **External Access**: ngrok (webhook tunneling)
 - **Containerization**: Docker Compose with health checks
 
 ### Core Architecture
@@ -715,6 +749,9 @@ cloudonix-voiceagent-lbs/
 │   ├── web/                    # React container (Node.js)
 │   │   ├── Dockerfile
 │   │   └── nginx.conf
+│   ├── nginx/                  # Nginx reverse proxy
+│   │   ├── Dockerfile
+│   │   └── default.conf
 │   └── db/                     # Database initialization
 │       └── init.sql
 ├── backend/                    # Laravel 12 application
