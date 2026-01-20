@@ -5,19 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - 2026-01-20
+## [0.9.0] - 2026-01-20
 
 ### Added
-- **WP8: Real-Time Infrastructure - COMPLETED**: WebSocket broadcasting with event-driven updates
-- **Laravel Broadcasting**: Redis-based event broadcasting with WebSocket authentication
-- **Broadcasting Channels**: Tenant-scoped private channels for analytics, calls, and agents
-- **Real-Time Events**: AnalyticsUpdated, CallRecordCreated, and CallRecordUpdated events
-- **Event Broadcasting**: Integrated event broadcasting in controllers and services
-- **React WebSocket Hooks**: useWebSocket, useRealtimeAnalytics, and useRealtimeCalls hooks
-- **Connection Management**: Auto-reconnection, heartbeat, and connection state tracking
-- **Live Dashboard Updates**: Real-time metrics updates with connection status indicators
-- **Event-Driven UI**: Optimistic updates and live call record synchronization
-- **Scalable Broadcasting**: Redis pub/sub for horizontal scaling support
+- **WP9: Security & Reliability - COMPLETED**: Comprehensive security hardening and reliability improvements
+- **Threat Model**: Complete STRIDE framework analysis with risk assessment and mitigation strategies
+- **WebhookSecurityService**: Advanced webhook validation with IP filtering, rate limiting, and replay prevention
+- **TenantIsolation Middleware**: HTTP-level multi-tenant access control and resource isolation
+- **CallRecordPolicy**: Resource-level authorization with granular permission checking
+- **DataProtectionService**: Encryption, PII anonymization, and GDPR-compliant data handling
+- **Security Testing Suite**: Comprehensive unit tests covering all security validations and edge cases
+- **Encryption Framework**: Secure credential storage with automatic key rotation support
+- **GDPR Compliance**: Data retention policies, anonymization utilities, and compliance reporting
+- **Access Control**: Role-based permissions with tenant-scoped resource isolation
 
 ## [0.6.0] - 2026-01-20
 
