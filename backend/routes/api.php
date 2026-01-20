@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AgentGroupController;
 use App\Http\Controllers\Api\AgentGroupMembershipController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\CallRecordController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -104,6 +105,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('exports/{exportId}/status', [ExportController::class, 'status']);
     Route::get('exports/{exportId}/download', [ExportController::class, 'download']);
     Route::post('exports/cleanup', [ExportController::class, 'cleanup']);
+
+    // Call Records Management
+    Route::get('call-records', [CallRecordController::class, 'index']);
+    Route::get('call-records/{call_record}', [CallRecordController::class, 'show']);
+    Route::get('call-records/statistics/summary', [CallRecordController::class, 'statistics']);
+    Route::post('call-records/export', [CallRecordController::class, 'export']);
+    Route::get('call-records/filters/options', [CallRecordController::class, 'filters']);
 });
 
 // Voice Application Webhook Endpoints (Public - no authentication required)

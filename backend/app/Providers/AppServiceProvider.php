@@ -45,6 +45,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\AnalyticsService::class, function ($app) {
             return new \App\Services\AnalyticsService();
         });
+
+        $this->app->singleton(\App\Services\ExportService::class, function ($app) {
+            return new \App\Services\ExportService();
+        });
+
+        $this->app->singleton(\App\Services\FilterBuilderService::class, function ($app) {
+            return new \App\Services\FilterBuilderService();
+        });
     }
 
     /**
