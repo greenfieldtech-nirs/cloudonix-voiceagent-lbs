@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Redis Integration**: Comprehensive Redis service layer with atomic operations, distributed locks, and memory management
 - **Strategy Monitoring**: Performance monitoring, health checks, alerting system, and memory usage tracking
 - **Service Registration**: Strategy factory and monitoring services registered in Laravel service container
+- **Group Membership CRUD**: Complete agent group and membership management with nested API operations
 - **Database Schema Updates**: Enhanced agent_groups and memberships tables with proper constraints
 
 ## [0.2.0] - 2026-01-20
@@ -100,9 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 All changes are tracked with corresponding git commits:
 
-- `e114297` - feat: Implement Redis integration and memory management for WP3 (2026-01-20)
-- `a58c1c1` - feat: Enhance RoundRobinStrategy with capacity weighting and advanced features (2026-01-20)
-- `9a12623` - feat: Enhance PriorityStrategy with advanced failover and round-robin logic (2026-01-20)
+- `578bfb9` - feat: Implement WP3 Step 3.7 - Group Membership CRUD Operations (2026-01-20)
 - `beb803a` - feat: Implement WP3 Step 3.2 - Distribution Strategy Interface and Implementations (2026-01-20)
 - `957a7de` - feat: Implement WP3 Step 3.1 - AgentGroup models and enums (2026-01-20)
 - `64e6a20` - feat: Complete WP2 Voice Agent Management implementation (2026-01-20)
