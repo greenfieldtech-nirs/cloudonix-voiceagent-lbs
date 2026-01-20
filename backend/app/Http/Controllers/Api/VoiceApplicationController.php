@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\CloudonixWebhookValidator;
 use App\Services\PatternMatchingService;
 use App\Services\RoutingDecisionService;
+use App\Services\OutboundRoutingEngine;
 
 /**
  * VoiceApplicationController handles webhook endpoints for Cloudonix Voice Applications
@@ -88,38 +89,52 @@ class VoiceApplicationController extends Controller
 
             $validatedData = $payloadValidation['data'];
 
-            // Find the voice application by provider_app_id
-            $voiceApplication = VoiceApplication::where('provider_app_id', $applicationId)
-                ->where('tenant_id', $tenant->id)
-                ->where('is_active', true)
-                ->first();
+            // Check if this is an outbound call
+            $outboundRoutingEngine = app(OutboundRoutingEngine::class);
+            $isOutboundCall = $outboundRoutingEngine->isOutboundCall($tenant, $validatedData);
 
-            if (! $voiceApplication) {
-                Log::warning('Voice application not found', [
+            if ($isOutboundCall) {
+                // Handle outbound call routing
+                Log::info('Detected outbound call, executing outbound routing', [
                     'application_id' => $applicationId,
                     'tenant_id' => $tenant->id,
-                    'request_data' => $validatedData,
-                    'validation_report' => $validationReport,
+                    'caller_id' => $validatedData['From'] ?? null,
+                    'destination' => $validatedData['To'] ?? null,
                 ]);
 
-                return response('Application not found', 404);
+                $routingResult = $this->executeOutboundRouting($tenant, $validatedData);
+            } else {
+                // Handle inbound call routing
+                Log::info('Detected inbound call, executing inbound routing', [
+                    'application_id' => $applicationId,
+                    'tenant_id' => $tenant->id,
+                    'caller_id' => $validatedData['From'] ?? null,
+                    'destination' => $validatedData['To'] ?? null,
+                ]);
+
+                // Find the voice application by provider_app_id for inbound calls
+                $voiceApplication = VoiceApplication::where('provider_app_id', $applicationId)
+                    ->where('tenant_id', $tenant->id)
+                    ->where('is_active', true)
+                    ->first();
+
+                if (! $voiceApplication) {
+                    Log::warning('Voice application not found for inbound call', [
+                        'application_id' => $applicationId,
+                        'tenant_id' => $tenant->id,
+                        'request_data' => $validatedData,
+                        'validation_report' => $validationReport,
+                    ]);
+
+                    return response('Application not found', 404);
+                }
+
+                // Store the call session for inbound calls
+                $this->storeOrUpdateCallSession($voiceApplication, $request);
+
+                // Execute dynamic inbound routing decision
+                $routingResult = $this->executeDynamicRouting($tenant, $validatedData);
             }
-
-            // Log the incoming request
-            Log::info('Voice application request received', [
-                'application_id' => $applicationId,
-                'tenant_id' => $tenant->id,
-                'tenant_domain' => $tenantDomain,
-                'request_data' => $validatedData,
-                'validation_report' => $validationReport,
-                'headers' => $request->headers->all(),
-            ]);
-
-            // Store the call session if this is a new call
-            $this->storeOrUpdateCallSession($voiceApplication, $request);
-
-            // Execute dynamic routing decision
-            $routingResult = $this->executeDynamicRouting($tenant, $validatedData);
 
             // Log routing decision
             Log::info('Voice application routing completed', [
@@ -577,6 +592,112 @@ class VoiceApplicationController extends Controller
                     'error' => $e->getMessage(),
                 ],
             ];
+        }
+    }
+
+    /**
+     * Execute outbound routing decision for outbound calls
+     */
+    private function executeOutboundRouting(Tenant $tenant, array $callData): array
+    {
+        try {
+            // Get outbound routing engine
+            $outboundRoutingEngine = app(OutboundRoutingEngine::class);
+
+            // Execute outbound routing evaluation
+            $routingResult = $outboundRoutingEngine->evaluateOutboundRouting($tenant, [
+                'caller_id' => $callData['From'] ?? null,
+                'destination' => $callData['To'] ?? null,
+                'direction' => 'outbound',
+            ]);
+
+            if ($routingResult['success']) {
+                // Generate CXML for outbound routing
+                $cxmlService = app(CxmlService::class);
+
+                if (isset($routingResult['selected_trunk'])) {
+                    $cxml = $cxmlService->generateOutboundTrunkRoutingFromModel(
+                        $routingResult['selected_trunk'],
+                        $routingResult['destination'],
+                        $routingResult['caller_id']
+                    );
+                } else {
+                    // Fallback to hangup if no trunk selected
+                    $cxml = $cxmlService->generateHangup();
+                    $routingResult['success'] = false;
+                    $routingResult['reason'] = $routingResult['reason'] ?? 'No trunk available';
+                }
+
+                $routingResult['cxml'] = $cxml;
+
+                // Store outbound call session
+                $this->storeOutboundCallSession($tenant, $routingResult);
+
+            } else {
+                // Generate hangup CXML for failed routing
+                $cxmlService = app(CxmlService::class);
+                $routingResult['cxml'] = $cxmlService->generateHangup();
+            }
+
+            return $routingResult;
+
+        } catch (\Exception $e) {
+            Log::error('Outbound routing execution failed', [
+                'tenant_id' => $tenant->id,
+                'call_data' => $callData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Fallback to hangup on error
+            $cxmlService = app(CxmlService::class);
+            return [
+                'success' => false,
+                'cxml' => $cxmlService->generateHangup(),
+                'routing_type' => 'hangup',
+                'reason' => 'Outbound routing execution failed: ' . $e->getMessage(),
+                'metadata' => [
+                    'error' => $e->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    /**
+     * Store outbound call session
+     */
+    private function storeOutboundCallSession(Tenant $tenant, array $routingResult): void
+    {
+        try {
+            $callSession = CallSession::create([
+                'tenant_id' => $tenant->id,
+                'session_id' => 'outbound_' . uniqid(),
+                'call_id' => 'outbound_' . uniqid(),
+                'direction' => 'outbound',
+                'from_number' => $routingResult['caller_id'],
+                'to_number' => $routingResult['destination'],
+                'status' => 'ringing',
+                'started_at' => now(),
+                'state' => ['outbound_routing' => true],
+                'metadata' => [
+                    'routing_result' => $routingResult,
+                    'trunk_id' => $routingResult['selected_trunk']->id ?? null,
+                    'trunk_name' => $routingResult['selected_trunk']->name ?? null,
+                ],
+            ]);
+
+            Log::info('Outbound call session created', [
+                'session_id' => $callSession->session_id,
+                'tenant_id' => $tenant->id,
+                'routing_type' => $routingResult['routing_type'],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to store outbound call session', [
+                'tenant_id' => $tenant->id,
+                'routing_result' => $routingResult,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

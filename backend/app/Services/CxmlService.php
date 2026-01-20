@@ -159,6 +159,86 @@ class CxmlService
     }
 
     /**
+     * Generate CXML for outbound trunk routing
+     */
+    public function generateOutboundTrunkRouting(string $phoneNumber, array $trunkConfig = [], string $callerId = null): string
+    {
+        $trunkIds = $trunkConfig['trunk_ids'] ?? [];
+        $trunkAttributes = [];
+
+        // Build trunk-specific attributes
+        if (!empty($trunkIds)) {
+            $trunkAttributes[] = 'trunks="' . htmlspecialchars(implode(',', $trunkIds)) . '"';
+        }
+
+        // Add any additional trunk configuration attributes
+        if (isset($trunkConfig['ring_timeout'])) {
+            $trunkAttributes[] = 'timeout="' . htmlspecialchars($trunkConfig['ring_timeout']) . '"';
+        }
+
+        if (isset($trunkConfig['max_duration'])) {
+            $trunkAttributes[] = 'maxDuration="' . htmlspecialchars($trunkConfig['max_duration']) . '"';
+        }
+
+        $trunkAttributeString = empty($trunkAttributes) ? '' : ' ' . implode(' ', $trunkAttributes);
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<Response>' . "\n";
+        $xml .= '  <Dial' . $trunkAttributeString;
+
+        if ($callerId) {
+            $xml .= ' callerId="' . htmlspecialchars($callerId) . '"';
+        }
+
+        $xml .= ' action="' . $this->getCallbackUrl() . '" method="POST">' . "\n";
+        $xml .= '    <Number>' . htmlspecialchars($phoneNumber) . '</Number>' . "\n";
+        $xml .= '  </Dial>' . "\n";
+        $xml .= '</Response>' . "\n";
+
+        return $xml;
+    }
+
+    /**
+     * Generate CXML for outbound routing using a Trunk model
+     */
+    public function generateOutboundTrunkRoutingFromModel(\App\Models\Trunk $trunk, string $phoneNumber, string $callerId = null): string
+    {
+        // Use trunk configuration for routing attributes
+        $trunkConfig = $trunk->configuration ?? [];
+        $trunkConfig['trunk_ids'] = [$trunk->cloudonix_trunk_id];
+
+        return $this->generateOutboundTrunkRouting($phoneNumber, $trunkConfig, $callerId);
+    }
+
+    /**
+     * Validate outbound CXML structure
+     */
+    public function validateOutboundCxml(string $cxml): bool
+    {
+        // Basic validation for outbound calls
+        if (!str_contains($cxml, '<?xml version="1.0"')) {
+            return false;
+        }
+
+        if (!str_contains($cxml, '<Response>') || !str_contains($cxml, '</Response>')) {
+            return false;
+        }
+
+        if (!str_contains($cxml, '<Dial>') || !str_contains($cxml, '<Number>')) {
+            return false;
+        }
+
+        // Try to parse as XML
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($cxml);
+        if ($xml === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Get supported providers and their CXML requirements
      */
     public static function getProviderRequirements(): array
