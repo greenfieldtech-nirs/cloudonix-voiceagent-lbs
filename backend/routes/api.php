@@ -65,6 +65,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('voice-agents', VoiceAgentController::class);
     Route::patch('voice-agents/{voice_agent}/toggle', [VoiceAgentController::class, 'toggleStatus']);
     Route::post('voice-agents/{voice_agent}/validate', [VoiceAgentController::class, 'validateConfig']);
+
+    // Agent Group Management
+    Route::apiResource('agent-groups', AgentGroupController::class);
+    Route::patch('agent-groups/{agent_group}/toggle', [AgentGroupController::class, 'toggleStatus']);
+    Route::get('agent-groups/{agent_group}/stats', [AgentGroupController::class, 'stats']);
+    Route::post('agent-groups/{agent_group}/reset-strategy', [AgentGroupController::class, 'resetStrategy']);
+
+    // Agent Group Membership Management
+    Route::get('agent-groups/{agent_group}/memberships', [AgentGroupMembershipController::class, 'index']);
+    Route::post('agent-groups/{agent_group}/memberships', [AgentGroupMembershipController::class, 'store']);
+    Route::get('agent-groups/{agent_group}/memberships/{membership}', [AgentGroupMembershipController::class, 'show']);
+    Route::put('agent-groups/{agent_group}/memberships/{membership}', [AgentGroupMembershipController::class, 'update']);
+    Route::delete('agent-groups/{agent_group}/memberships/{membership}', [AgentGroupMembershipController::class, 'destroy']);
+    Route::patch('agent-groups/{agent_group}/memberships/bulk-update', [AgentGroupMembershipController::class, 'bulkUpdate']);
+    Route::get('agent-groups/{agent_group}/available-agents', [AgentGroupMembershipController::class, 'availableAgents']);
+    Route::patch('agent-groups/{agent_group}/memberships/reorder', [AgentGroupMembershipController::class, 'reorder']);
 });
 
 // Voice Application Webhook Endpoints (Public - no authentication required)
