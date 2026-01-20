@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-20
+
+### Added
+- **WP7: Call Records Management - COMPLETED**: Advanced call logging with filtering and data retention
+- **CallRecordController**: REST API with advanced filtering, pagination, and statistics endpoints
+- **CallRecordResource**: API resource for formatted call record responses with computed fields
+- **FilterBuilderService**: Complex query construction with validation and tenant scoping
+- **DataRetentionService**: GDPR-compliant data lifecycle management with automatic archiving
+- **Database Performance**: Comprehensive indexes for call records query optimization
+- **React CallRecords Component**: Advanced filtering interface with sorting, pagination, and details modal
+- **Webhook Audit Enhancement**: Improved audit logging with relationship support
+- **Export Integration**: Call records export through existing background job system
+- **Advanced Filtering**: Multi-criteria filtering by date, status, agent, group, duration, and numbers
+
 ## [0.6.0] - 2026-01-20
 
 ### Added
