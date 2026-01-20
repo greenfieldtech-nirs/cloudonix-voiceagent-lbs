@@ -1,0 +1,722 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Cloudonix Voice Application Tool API",
+    "description": "REST API for managing voice agent routing, analytics, and call records",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@voiceagent.example.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.voiceagent.example.com",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/voice-agents": {
+      "get": {
+        "summary": "List voice agents",
+        "description": "Get paginated list of voice agents with optional filtering",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search term for agent names"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by enabled status"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["vapi", "synthflow", "dasha", "superdash.ai", "elevenlabs", "deepvox", "relayhawk", "voicehub", "retell-udp", "retell-tcp", "retell-tls", "retell", "fonio", "sigmamind", "modon", "puretalk", "millis-us", "millis-eu"]
+            },
+            "description": "Filter by provider"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VoiceAgent"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PaginationMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create voice agent",
+        "description": "Create a new voice agent configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "provider", "service_value"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Customer Support Agent"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": ["vapi", "synthflow", "dasha", "superdash.ai", "elevenlabs", "deepvox", "relayhawk", "voicehub", "retell-udp", "retell-tcp", "retell-tls", "retell", "fonio", "sigmamind", "modon", "puretalk", "millis-us", "millis-eu"],
+                    "example": "vapi"
+                  },
+                  "service_value": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "agent_12345"
+                  },
+                  "username": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Required for providers that need authentication"
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Required for providers that need authentication"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Additional configuration data",
+                    "example": {
+                      "region": "us-east",
+                      "language": "en-US"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Voice agent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/voice-agents/{id}": {
+      "put": {
+        "summary": "Update voice agent",
+        "description": "Update an existing voice agent configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Voice agent ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "service_value": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "username": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Voice agent updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgent"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete voice agent",
+        "description": "Delete a voice agent configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Voice agent ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Voice agent deleted successfully"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/voice-agents/{id}/toggle": {
+      "patch": {
+        "summary": "Toggle voice agent status",
+        "description": "Enable or disable a voice agent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Voice agent ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voice agent status toggled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAgent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/metrics": {
+      "get": {
+        "summary": "Get analytics metrics",
+        "description": "Retrieve real-time and historical call metrics",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date for metrics (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date for metrics (YYYY-MM-DD)"
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by specific voice agent"
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by specific agent group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metrics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "calls_today": {
+                      "type": "integer",
+                      "example": 150
+                    },
+                    "success_rate": {
+                      "type": "number",
+                      "format": "float",
+                      "example": 0.95
+                    },
+                    "avg_duration": {
+                      "type": "integer",
+                      "example": 180
+                    },
+                    "active_calls": {
+                      "type": "integer",
+                      "example": 3
+                    },
+                    "trends": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-01"
+                          },
+                          "calls": {
+                            "type": "integer",
+                            "example": 120
+                          },
+                          "success_rate": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 0.94
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voice/application/{domain}": {
+      "post": {
+        "summary": "Voice Application Webhook",
+        "description": "Handle incoming voice application requests from Cloudonix",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cloudonix domain identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "CallSid": {
+                    "type": "string",
+                    "description": "Cloudonix session identifier",
+                    "example": "session_1234567890"
+                  },
+                  "From": {
+                    "type": "string",
+                    "description": "Calling subscriber phone number",
+                    "example": "+1234567890"
+                  },
+                  "To": {
+                    "type": "string",
+                    "description": "DNID that activated application",
+                    "example": "+0987654321"
+                  },
+                  "Direction": {
+                    "type": "string",
+                    "enum": ["inbound", "outbound-api", "subscriber"],
+                    "example": "inbound"
+                  },
+                  "Session": {
+                    "type": "string",
+                    "description": "Cloudonix session token",
+                    "example": "session_token_abc123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CXML response generated successfully",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string",
+                  "description": "Cloudonix CXML routing instructions"
+                },
+                "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n  <Dial callerId=\"+1234567890\" action=\"/api/voice/callback\" method=\"POST\">\n    <Service provider=\"vapi\">agent_123</Service>\n  </Dial>\n</Response>"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid webhook request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "VoiceAgent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "tenant_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Customer Support Agent"
+          },
+          "provider": {
+            "type": "string",
+            "enum": ["vapi", "synthflow", "dasha", "superdash.ai", "elevenlabs", "deepvox", "relayhawk", "voicehub", "retell-udp", "retell-tcp", "retell-tls", "retell", "fonio", "sigmamind", "modon", "puretalk", "millis-us", "millis-eu"],
+            "example": "vapi"
+          },
+          "service_value": {
+            "type": "string",
+            "example": "agent_12345"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true
+          },
+          "metadata": {
+            "type": "object",
+            "example": {
+              "region": "us-east",
+              "language": "en-US"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AgentGroup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "tenant_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "example": "Support Team"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": ["load_balanced", "priority", "round_robin"],
+            "example": "load_balanced"
+          },
+          "settings": {
+            "type": "object",
+            "example": {
+              "window_hours": 24,
+              "fallback_enabled": true
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoiceAgent"
+            }
+          }
+        }
+      },
+      "CallRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "session_token": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["inbound", "outbound"]
+          },
+          "from_number": {
+            "type": "string"
+          },
+          "to_number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "ringing", "in_progress", "completed", "busy", "failed", "no_answer"]
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/VoiceAgent"
+          },
+          "group": {
+            "$ref": "#/components/schemas/AgentGroup"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "current_page": {
+            "type": "integer",
+            "example": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 150
+          },
+          "last_page": {
+            "type": "integer",
+            "example": 8
+          },
+          "from": {
+            "type": "integer",
+            "example": 1
+          },
+          "to": {
+            "type": "integer",
+            "example": 20
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "name": ["The name field is required."],
+              "provider": ["The selected provider is invalid."]
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required or invalid credentials",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Unauthorized"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "Invalid API key"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Resource not found"
+                },
+                "resource": {
+                  "type": "string",
+                  "example": "voice_agent"
+                },
+                "id": {
+                  "type": "string",
+                  "example": "123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
